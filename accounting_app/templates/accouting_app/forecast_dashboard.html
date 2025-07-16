@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2>Financial Forecasts</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Job Type</th>
+                <th>Projected Revenue</th>
+                <th>Forecast Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for forecast in forecasts %}
+            <tr>
+                <td>{{ forecast.job_type }}</td>
+                <td>${{ forecast.projected_revenue }}</td>
+                <td>{{ forecast.forecast_date }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

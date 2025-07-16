@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5">Welcome to the Sales Management System</h1>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title">Sales & Management</h3>
+                    <p class="card-text">
+                        Manage your sales operations efficiently. Cashiers can record sales transactions, 
+                        track product inventory, and process customer purchases. Managers can oversee all 
+                        sales activities, edit records, and monitor performance with detailed insights.
+                    </p>
+                    <a href="{% url 'sales_root' %}" class="btn btn-primary">Go to Sales</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body">
+                    <h3 class="card-title">Accounting & Forecasting</h3>
+                    <p class="card-text">
+                        Plan and analyze financial performance with our accounting tools. Create and view 
+                        financial forecasts based on sales data, track projected revenues, and make informed 
+                        strategic decisions to drive business growth.
+                    </p>
+                    <a href="{% url 'forecast_dashboard' %}" class="btn btn-primary">Go to Accounting</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+```
