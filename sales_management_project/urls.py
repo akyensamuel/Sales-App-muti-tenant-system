@@ -1,9 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.views.generic import TemplateView
-
+import core.views as core_views
 urlpatterns = [
-    path('', TemplateView.as_view(template_name='home.html'), name='home'),  # Default route
+    path('', core_views.Index.as_view(), name='home'),  # Default route
     path('admin/', admin.site.urls),
     path('sales/', include('sales_app.urls')),
     path('accounting/', include('accounting_app.urls')),

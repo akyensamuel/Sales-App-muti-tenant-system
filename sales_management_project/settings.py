@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django_bootstrap5',  # Added for Bootstrap integration
     'sales_app',
     'accounting_app',
+    'core',  # Core application for shared views and templates
 ]
 
 MIDDLEWARE = [
@@ -55,7 +56,6 @@ ROOT_URLCONF = 'sales_management_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'sales_management_project', 'templates')], # Directory for custom templates
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -105,7 +105,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Optional: for local static files
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

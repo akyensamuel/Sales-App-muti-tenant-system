@@ -9,6 +9,9 @@ def is_manager(user):
     return user.is_authenticated and user.is_staff
 
 def login_view(request):
+    if request.user.is_authenticated:
+        return redirect('sales_entry')
+    
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
