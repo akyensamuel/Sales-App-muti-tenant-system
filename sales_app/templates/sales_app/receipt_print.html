@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Receipt</title>
+    <style>
+        @media print {
+            @page {
+                size: 5in 12in;
+                margin: 0.5in;
+            }
+            body {
+                width: 5in;
+                max-width: 5in;
+            }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            width: 5in;
+            max-width: 5in;
+            margin: 0 auto;
+            background: #fff;
+            color: #222;
+        }
+        .receipt {
+            padding: 1em;
+        }
+        .receipt h2 {
+            text-align: center;
+            margin-bottom: 1em;
+        }
+        .receipt-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .receipt-table td {
+            padding: 0.3em 0;
+        }
+        .receipt-footer {
+            margin-top: 2em;
+            text-align: center;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body onload="window.print(); setTimeout(function(){ window.location.href = '{% url 'sales_entry' %}'; }, 500);">
+    <div class="receipt">
+        <h2>Sales Receipt</h2>
+        <table class="receipt-table">
+            <tr><td><strong>Date & Time:</strong></td><td>{{ datetime }}</td></tr>
+            <tr><td><strong>Recorded by:</strong></td><td>{{ recorded_by }}</td></tr>
+            <tr><td><strong>Job Type:</strong></td><td>{{ job_type }}</td></tr>
+            <tr><td><strong>Unit Price:</strong></td><td>{{ unit_price }}</td></tr>
+            <tr><td><strong>Quantity:</strong></td><td>{{ quantity }}</td></tr>
+            <tr><td><strong>Total Price:</strong></td><td>{{ total_price }}</td></tr>
+            <tr><td><strong>Amount Paid:</strong></td><td>{{ amount_paid }}</td></tr>
+            <tr><td><strong>Balance:</strong></td><td>{{ balance }}</td></tr>
+        </table>
+        <div class="receipt-footer">
+            Thank you for your purchase!
+        </div>
+    </div>
+</body>
+</html>

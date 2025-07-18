@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'sales_app',
     'accounting_app',
     'core',  # Core application for shared views and templates
+    'widget_tweaks',  # For customizing form widgets in templates
 ]
 
 MIDDLEWARE = [

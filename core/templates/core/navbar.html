@@ -3,11 +3,6 @@
         <a class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2 sm:mb-0" href="#">Sales Home</a>
         <div class="flex flex-col sm:flex-row items-center gap-4">
             {% if user.is_authenticated %}
-                {% if user.is_staff %}
-                    <a class="px-4 py-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900 transition" href="{% url 'forecast_dashboard' %}">Dashboard</a>
-                {% else %}
-                    <a class="px-4 py-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900 transition" href="{% url 'sales_entry' %}">Enter Sale</a>
-                {% endif %}
                 <a class="px-4 py-2 rounded hover:bg-red-100 dark:hover:bg-red-900 transition flex items-center gap-1" href="{% url 'logout' %}">
                     <span>Logout</span>
                     <svg class="w-5 h-5 text-gray-800 dark:text-white inline-block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 16">
