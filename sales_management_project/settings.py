@@ -35,7 +35,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_bootstrap5',  # Added for Bootstrap integration
     'sales_app',
     'accounting_app',
     'core',  # Core application for shared views and templates

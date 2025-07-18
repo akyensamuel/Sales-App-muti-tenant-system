@@ -1,18 +1,28 @@
- <nav class="w-full bg-gray-100 dark:bg-gray-800 shadow">
-        <div class="container mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between">
-            <a class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2 sm:mb-0" href="#">Sales Home</a>
-            <div class="flex flex-col sm:flex-row items-center gap-2">
-                {% if user.is_authenticated %}
-                    {% if user.is_staff %}
-                        <a class="px-4 py-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900 transition" href="{% url 'manager_dashboard' %}">Dashboard</a>
-                    {% else %}
-                        <a class="px-4 py-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900 transition" href="{% url 'sales_entry' %}">Enter Sale</a>
-                    {% endif %}
-                    <a class="px-4 py-2 rounded hover:bg-red-100 dark:hover:bg-red-900 transition" href="{% url 'logout' %}">Logout</a>
+<nav class="w-full bg-gray-100 dark:bg-gray-800 shadow">
+    <div class="container mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between">
+        <a class="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-2 sm:mb-0" href="#">Sales Home</a>
+        <div class="flex flex-col sm:flex-row items-center gap-4">
+            {% if user.is_authenticated %}
+                {% if user.is_staff %}
+                    <a class="px-4 py-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900 transition" href="{% url 'forecast_dashboard' %}">Dashboard</a>
                 {% else %}
-                    <a class="px-4 py-2 rounded hover:bg-green-100 dark:hover:bg-green-900 transition" href="{% url 'login' %}">Login</a>
+                    <a class="px-4 py-2 rounded hover:bg-blue-100 dark:hover:bg-blue-900 transition" href="{% url 'sales_entry' %}">Enter Sale</a>
                 {% endif %}
-                <button class="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition theme-toggle ml-0 sm:ml-2" onclick="toggleTheme()">Toggle Theme</button>
-            </div>
+                <a class="px-4 py-2 rounded hover:bg-red-100 dark:hover:bg-red-900 transition flex items-center gap-1" href="{% url 'logout' %}">
+                    <span>Logout</span>
+                    <svg class="w-5 h-5 text-gray-800 dark:text-white inline-block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 16">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8H1m0 0 4-4M1 8l4 4m7-9h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/>
+                    </svg>
+                </a>
+            {% else %}
+                <a class="px-4 py-2 rounded hover:bg-green-100 dark:hover:bg-green-900 transition flex items-center gap-1" href="{% url 'login' %}">
+                    <span>Login </span>
+                    <svg class="w-5 h-5 text-gray-800 dark:text-white inline-block" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 16">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h11m0 0-4-4m4 4-4 4m-5 3H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h3"/>
+                    </svg>
+                </a>
+            {% endif %}
+            <button class="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition theme-toggle ml-0 sm:ml-2" onclick="toggleTheme()">Toggle Theme</button>
         </div>
-    </nav>
+    </div>
+</nav>
