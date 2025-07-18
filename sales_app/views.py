@@ -8,19 +8,21 @@ from .forms import SaleForm
 from django.db.models import Sum
 
 def is_manager(user):
-    return user.is_authenticated and user.is_staff
+    return user.is_authenticated and user.groups.filter(name='Managers').exists()
 
 def login_view(request):
     if request.user.is_authenticated:
+        if request.user.groups.filter(name='Managers').exists():
+            return redirect('manager_dashboard')
         return redirect('sales_entry')
-    
+
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            if user.is_staff:
+            if user.groups.filter(name='Managers').exists():
                 return redirect('manager_dashboard')
             return redirect('sales_entry')
         else:
