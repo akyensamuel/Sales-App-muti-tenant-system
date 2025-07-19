@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Sale, AdminLog
+from .models import Invoice, Sale, AdminLog
 from django.utils import timezone
 from datetime import timedelta
-from .forms import SaleForm
+from .forms import InvoiceForm, SaleForm
+from django.forms import modelformset_factory, inlineformset_factory
 from django.db.models import Sum
 
 def is_manager(user):
@@ -33,59 +34,124 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
+
+
 @login_required
 def sales_entry(request):
+    # Remove 'discount' from InvoiceForm, so only per-item discount is used
+    SaleFormSet = inlineformset_factory(Invoice, Sale, form=SaleForm, extra=1, can_delete=True)
     if request.method == 'POST':
-        form = SaleForm(request.POST)
-        if form.is_valid():
-            sale = form.save(commit=False)
-            sale.cashier = request.user
-            sale.save()
-
-
+        invoice_form = InvoiceForm(request.POST)
+        formset = SaleFormSet(request.POST)
+        if invoice_form.is_valid() and formset.is_valid():
+            invoice = invoice_form.save(commit=False)
+            invoice.user = request.user
+            # Calculate total from formset using per-item total_price
+            total = 0
+            from decimal import Decimal
+            for form in formset:
+                if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                    item_total = form.cleaned_data.get('total_price')
+                    if item_total is None:
+                        item_total = Decimal('0.00')
+                    total += item_total
+            invoice.save()
+            formset.instance = invoice
+            formset.save()
+            # Now recalculate total from all saved items and update invoice
+            invoice.total = sum(item.total_price for item in invoice.items.all())
+            invoice.save()
             if 'save_print' in request.POST:
                 context = {
-                    'recorded_by': request.user.username,
-                    'job_type': sale.job_type,
-                    'unit_price': sale.unit_price,
-                    'quantity': sale.quantity,
-                    'total_price': sale.total_price,
-                    'amount_paid': sale.amount_paid,
-                    'balance': sale.balance,
-                    'datetime': sale.sale_date,
+                    'invoice': invoice,
+                    'items': invoice.items.all(),
                 }
                 return render(request, 'sales_app/receipt_print.html', context)
             return redirect('sales_entry')
     else:
-        form = SaleForm()
-    return render(request, 'sales_app/sales_entry.html', {'form': form})
+        invoice_form = InvoiceForm()
+        formset = SaleFormSet()
+    return render(request, 'sales_app/sales_entry.html', {
+        'invoice_form': invoice_form,
+        'formset': formset
+    })
+
 
 
 
 @login_required
 @user_passes_test(is_manager)
 def manager_dashboard(request):
-    # Filter sales from the last 24 hours by default
-    now = timezone.now()
-    last_24h = now - timedelta(hours=24)
-    sales = Sale.objects.filter(sale_date__gte=last_24h).order_by('-sale_date')
-    total_sales = sales.aggregate(Sum('total_price'))['total_price__sum'] or 0
-
-    # Handle delete action
-    if request.method == 'POST' and 'delete_sale_id' in request.POST:
-        sale_id = request.POST.get('delete_sale_id')
+    from django.db.models import Q
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    invoices = Invoice.objects.all().order_by('-date_of_sale')
+    if start_date:
+        invoices = invoices.filter(date_of_sale__gte=start_date)
+    if end_date:
+        invoices = invoices.filter(date_of_sale__lte=end_date)
+    if not start_date and not end_date:
+        today = timezone.now().date()
+        invoices = invoices.filter(date_of_sale=today)
+    # Handle delete action (delete all sales for an invoice)
+    if request.method == 'POST' and 'delete_invoice_id' in request.POST:
+        invoice_id = request.POST.get('delete_invoice_id')
         try:
-            sale = Sale.objects.get(id=sale_id)
-            AdminLog.objects.create(user=request.user, action='Deleted Sale', details=f'Sale ID: {sale_id}, Quantity: {sale.quantity}')
-            sale.delete()
-        except Sale.DoesNotExist:
+            invoice = Invoice.objects.get(id=invoice_id)
+            AdminLog.objects.create(user=request.user, action='Deleted Invoice', details=f'Invoice ID: {invoice_id}, Customer: {invoice.customer_name}')
+            invoice.delete()
+        except Invoice.DoesNotExist:
             pass
         return redirect('manager_dashboard')
-
+    total_sales = invoices.aggregate(Sum('total'))['total__sum'] or 0
     return render(request, 'sales_app/manager_dashboard.html', {
-        'sales': sales,
+        'invoices': invoices,
         'total_sales': total_sales
     })
+
+
+# Invoice detail view (and print mode)
+@login_required
+@user_passes_test(is_manager)
+def invoice_detail(request, invoice_id, print_mode=False):
+    invoice = Invoice.objects.get(id=invoice_id)
+    items = invoice.items.exclude(item__isnull=True).exclude(item__exact="")
+    if print_mode or request.resolver_match.url_name == 'receipt_print':
+        return render(request, 'sales_app/receipt_print.html', {
+            'invoice': invoice,
+            'items': items
+        })
+    return render(request, 'sales_app/invoice_detail.html', {
+        'invoice': invoice,
+        'items': items
+    })
+
+# Edit invoice view (edit only invoice fields, not items)
+
+@login_required
+@user_passes_test(is_manager)
+def edit_invoice(request, invoice_id):
+    invoice = Invoice.objects.get(id=invoice_id)
+    SaleFormSet = inlineformset_factory(Invoice, Sale, form=SaleForm, extra=0, can_delete=True)
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST, instance=invoice)
+        formset = SaleFormSet(request.POST, instance=invoice)
+        if form.is_valid() and formset.is_valid():
+            invoice = form.save(commit=False)
+            invoice.user = request.user
+            invoice.save()
+            # Save formset, which will handle add, update, and delete
+            formset.instance = invoice
+            formset.save()
+            # Remove any Sale objects not in the formset (should be handled by can_delete)
+            # Recalculate invoice total from all current items
+            invoice.total = sum(item.total_price for item in invoice.items.all())
+            invoice.save()
+            return redirect('manager_dashboard')
+    else:
+        form = InvoiceForm(instance=invoice)
+        formset = SaleFormSet(instance=invoice)
+    return render(request, 'sales_app/edit_invoice.html', {'form': form, 'formset': formset, 'invoice': invoice})
 
 @user_passes_test(is_manager)
 def edit_sale(request, sale_id):

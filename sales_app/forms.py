@@ -1,17 +1,28 @@
 from django import forms
-from .models import Product, Sale
+from .models import Invoice, Sale
+
+
+
+class InvoiceForm(forms.ModelForm):
+    class Meta:
+        model = Invoice
+        # Remove 'discount' from fields
+        fields = ['customer_name', 'date_of_sale', 'notes', 'amount_paid']
+        widgets = {
+            'customer_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'date_of_sale': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'amount_paid': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
 
 class SaleForm(forms.ModelForm):
     class Meta:
         model = Sale
-        fields = [
-            'job_type', 'unit_price', 'quantity', 'total_price', 'amount_paid', 'balance'
-        ]
+        fields = ['item', 'unit_price', 'quantity', 'discount', 'total_price']
         widgets = {
-            'job_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'item': forms.TextInput(attrs={'class': 'form-control'}),
             'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control'}),
+            'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'total_price': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
-            'amount_paid': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'balance': forms.NumberInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
         }
