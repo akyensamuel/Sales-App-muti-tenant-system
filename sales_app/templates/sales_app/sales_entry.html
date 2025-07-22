@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 {% load widget_tweaks %}
 {% block content %}
 <div class="max-w-5xl mx-auto mt-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -56,7 +57,7 @@
                         </td>
                     </tr>
                     {% endfor %}
-                    <!-- Hidden template row for JS cloning: use Django formset's empty_form -->
+                    <!-- Hidden template row for JS cloning:this uses Django formset's empty_form ;) -->
                     <tr id="template-row" class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 form-row" style="display:none;">
                         <td class="px-4 py-2">{{ formset.empty_form.item|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1' }}</td>
                         <td class="px-4 py-2">{{ formset.empty_form.unit_price|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1 unit-price' }}</td>
@@ -89,279 +90,288 @@
         </div>
     </form>
 </div>
+<!-- Load jQuery and Select2 before custom JS -->
+<script src="{% static 'sales_app/js/jquery.min.js' %}"></script>
+<link href="{% static 'sales_app/css/select2.min.css' %}" rel="stylesheet" />
+<script src="{% static 'sales_app/js/select2.min.js' %}"></script>
 <script>
-    // Dynamic add/remove row for formset with localStorage persistence
-    document.addEventListener('DOMContentLoaded', function() {
-        const STORAGE_KEY = 'sales_entry_form_data_v1';
-
-        function updateRowTotal(row) {
-            const unitPrice = row.querySelector('.unit-price');
-            const quantity = row.querySelector('.quantity');
-            const discount = row.querySelector('.discount');
-            const totalPrice = row.querySelector('.total-price');
-            if (unitPrice && quantity && totalPrice) {
-                const up = parseFloat(unitPrice.value) || 0;
-                const qty = parseFloat(quantity.value) || 0;
-                const disc = parseFloat(discount ? discount.value : 0) || 0;
-                totalPrice.value = ((up * qty) - disc).toFixed(2);
-            }
+$(document).ready(function() {
+    const STORAGE_KEY = 'sales_entry_form_data_v1';
+    function updateRowTotal(row) {
+        const unitPrice = row.querySelector('.unit-price');
+        const quantity = row.querySelector('.quantity');
+        const discount = row.querySelector('.discount');
+        const totalPrice = row.querySelector('.total-price');
+        if (unitPrice && quantity && totalPrice) {
+            const up = parseFloat(unitPrice.value) || 0;
+            const qty = parseFloat(quantity.value) || 0;
+            const disc = parseFloat(discount ? discount.value : 0) || 0;
+            totalPrice.value = ((up * qty) - disc).toFixed(2);
         }
-
-        function updateTotals() {
-            // Update all row totals first
-            document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-                updateRowTotal(row);
-            });
-            // Then sum for grand total
-            let grandTotal = 0;
-            document.querySelectorAll('.total-price').forEach(function(input) {
-                let val = parseFloat(input.value) || 0;
-                grandTotal += val;
-            });
-            document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
-            // Update balance field
-            const amountPaidInput = document.getElementById('id_amount_paid');
-            const balanceField = document.getElementById('balance-field');
-            if (amountPaidInput && balanceField) {
-                const paid = parseFloat(amountPaidInput.value) || 0;
-                balanceField.value = (grandTotal - paid).toFixed(2);
-            }
-        }
-
-        function bindRowInputs(row) {
-            row.querySelectorAll('.unit-price, .quantity, .discount').forEach(function(input) {
-                input.addEventListener('input', function() {
-                    updateRowTotal(row);
-                    updateTotals();
-                    saveFormToStorage();
-                });
-            });
-            // Save on item select change
-            const itemInput = row.querySelector('select[name*="item"]');
-            if (itemInput) {
-                itemInput.addEventListener('change', function() {
-                    updateRowTotal(row);
-                    updateTotals();
-                    saveFormToStorage();
-                });
-            }
-        }
-
-        // Save all form data to localStorage
-        function saveFormToStorage() {
-            const rows = [];
-            document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-                const item = row.querySelector('select[name*="item"]')?.value || '';
-                const unitPrice = row.querySelector('.unit-price')?.value || '';
-                const quantity = row.querySelector('.quantity')?.value || '';
-                const discount = row.querySelector('.discount')?.value || '';
-                const totalPrice = row.querySelector('.total-price')?.value || '';
-                rows.push({ item, unitPrice, quantity, discount, totalPrice });
-            });
-            // Invoice-level fields (no discount)
-            const invoiceFields = {
-                customer_name: document.getElementById('id_customer_name')?.value || '',
-                date_of_sale: document.getElementById('id_date_of_sale')?.value || '',
-                notes: document.getElementById('id_notes')?.value || '',
-                amount_paid: document.getElementById('id_amount_paid')?.value || ''
-            };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows, invoiceFields }));
-        }
-
-        // Restore form data from localStorage
-        function restoreFormFromStorage() {
-            const data = localStorage.getItem(STORAGE_KEY);
-            if (!data) return;
-            try {
-                const parsed = JSON.parse(data);
-                if (parsed.invoiceFields) {
-                    if (document.getElementById('id_customer_name')) document.getElementById('id_customer_name').value = parsed.invoiceFields.customer_name;
-                    if (document.getElementById('id_date_of_sale')) document.getElementById('id_date_of_sale').value = parsed.invoiceFields.date_of_sale;
-                    if (document.getElementById('id_notes')) document.getElementById('id_notes').value = parsed.invoiceFields.notes;
-                    if (document.getElementById('id_amount_paid')) document.getElementById('id_amount_paid').value = parsed.invoiceFields.amount_paid;
-                }
-                if (Array.isArray(parsed.rows) && parsed.rows.length > 0) {
-                    const tableBody = document.getElementById('items-table-body');
-                    let totalForms = document.getElementById('id_form-TOTAL_FORMS');
-                    
-                    // If TOTAL_FORMS doesn't exist, try to find it with different selectors
-                    if (!totalForms) {
-                        totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
-                    }
-                    if (!totalForms) {
-                        totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-                    }
-                    
-                    // Remove all but the first row
-                    while (tableBody.children.length > 1) tableBody.removeChild(tableBody.lastChild);
-                    // Fill the first row
-                    const firstRow = tableBody.children[0];
-                    const first = parsed.rows[0];
-                    if (firstRow && first) {
-                        const itemInput = firstRow.querySelector('select[name*="item"]');
-                        if (itemInput) itemInput.value = first.item;
-                        const unitPriceInput = firstRow.querySelector('.unit-price');
-                        if (unitPriceInput) unitPriceInput.value = first.unitPrice;
-                        const quantityInput = firstRow.querySelector('.quantity');
-                        if (quantityInput) quantityInput.value = first.quantity;
-                        const discountInput = firstRow.querySelector('.discount');
-                        if (discountInput) discountInput.value = first.discount;
-                        const totalPriceInput = firstRow.querySelector('.total-price');
-                        if (totalPriceInput) totalPriceInput.value = first.totalPrice;
-                    }
-                    // Add and fill additional rows
-                    for (let i = 1; i < parsed.rows.length; i++) {
-                        addNewRow(); // Use the improved add row function
-                        const row = tableBody.children[i];
-                        const r = parsed.rows[i];
-                        if (row && r) {
-                            const itemInput = row.querySelector('select[name*="item"]');
-                            if (itemInput) itemInput.value = r.item;
-                            const unitPriceInput = row.querySelector('.unit-price');
-                            if (unitPriceInput) unitPriceInput.value = r.unitPrice;
-                            const quantityInput = row.querySelector('.quantity');
-                            if (quantityInput) quantityInput.value = r.quantity;
-                            const discountInput = row.querySelector('.discount');
-                            if (discountInput) discountInput.value = r.discount;
-                            const totalPriceInput = row.querySelector('.total-price');
-                            if (totalPriceInput) totalPriceInput.value = r.totalPrice;
-                        }
-                    }
-                    // Update total forms count
-                    if (totalForms) {
-                        totalForms.value = parsed.rows.length.toString();
-                    }
-                    // Re-bind input listeners for all rows after restore
-                    document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-                        bindRowInputs(row);
-                    });
-                }
-            } catch (e) {
-                console.error('Error restoring form data:', e);
-            }
-        }
-
-        // Improved add row function using template row
-        function addNewRow() {
-            const tableBody = document.getElementById('items-table-body');
-            let totalForms = document.getElementById('id_form-TOTAL_FORMS');
-            if (!totalForms) {
-                totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
-            }
-            if (!totalForms) {
-                totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-            }
-            let currentCount = totalForms ? parseInt(totalForms.value) : tableBody.querySelectorAll('.form-row').length;
-            // Use the hidden template row
-            const templateRow = document.getElementById('template-row');
-            const newRow = templateRow.cloneNode(true);
-            newRow.style.display = '';
-            newRow.id = '';
-            // Update all name, id, and for attributes for the new row
-            newRow.querySelectorAll('input, select, textarea, label').forEach(function(el) {
-                if (el.name) {
-                    el.name = el.name.replace(/__prefix__/, currentCount);
-                }
-                if (el.id) {
-                    el.id = el.id.replace(/__prefix__/, currentCount);
-                }
-                if (el.htmlFor) {
-                    el.htmlFor = el.htmlFor.replace(/__prefix__/, currentCount);
-                }
-                // Clear values except for hidden fields
-                if (typeof el.value !== 'undefined' && el.type !== 'hidden') {
-                    el.value = '';
-                }
-            });
-            tableBody.appendChild(newRow);
-            if (totalForms) {
-                totalForms.value = (currentCount + 1).toString();
-            }
-            bindRowInputs(newRow);
-            updateTotals();
-        }
-
-        // Update balance when amount paid changes and save
+    }
+    function updateTotals() {
+        // Update all row totals first
+        document.querySelectorAll('#items-table-body tr').forEach(function(row) {
+            updateRowTotal(row);
+        });
+        // Then sum for grand total
+        let grandTotal = 0;
+        document.querySelectorAll('.total-price').forEach(function(input) {
+            let val = parseFloat(input.value) || 0;
+            grandTotal += val;
+        });
+        document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
+        // Update balance field
         const amountPaidInput = document.getElementById('id_amount_paid');
-        if (amountPaidInput) {
-            amountPaidInput.addEventListener('input', function() {
+        const balanceField = document.getElementById('balance-field');
+        if (amountPaidInput && balanceField) {
+            const paid = parseFloat(amountPaidInput.value) || 0;
+            balanceField.value = (grandTotal - paid).toFixed(2);
+        }
+    }
+    function bindRowInputs(row) {
+        row.querySelectorAll('.unit-price, .quantity, .discount').forEach(function(input) {
+            input.addEventListener('input', function() {
+                updateRowTotal(row);
                 updateTotals();
                 saveFormToStorage();
             });
-        }
-        
-        // Save on invoice-level field changes
-        ['id_customer_name', 'id_date_of_sale', 'id_notes'].forEach(function(id) {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('input', saveFormToStorage);
-                el.addEventListener('change', saveFormToStorage);
-            }
         });
-
-        // Bind all initial rows
-        document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-            bindRowInputs(row);
-        });
-
-        // Restore from localStorage if present
-        restoreFormFromStorage();
-        updateTotals();
-
-        // Add row logic (event delegation for all add-row buttons)
-        document.getElementById('items-table-body').addEventListener('click', function(e) {
-            if (e.target.closest('.add-row')) {
+        // Save on item select change
+        const itemInput = row.querySelector('select[name*="item"]');
+        if (itemInput) {
+            itemInput.addEventListener('change', function() {
+                updateRowTotal(row);
+                updateTotals();
                 saveFormToStorage();
-                addNewRow();
-                saveFormToStorage();
-            }
-        });
-
-        // Remove row logic
-        document.getElementById('items-table-body').addEventListener('click', function(e) {
-            if (e.target.closest('.remove-row')) {
-                const row = e.target.closest('tr');
-                const tableBody = document.getElementById('items-table-body');
-                if (tableBody.children.length > 1) {
-                    row.remove();
-                    // Update form count
-                    let totalForms = document.getElementById('id_form-TOTAL_FORMS');
-                    if (!totalForms) {
-                        totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
-                    }
-                    if (!totalForms) {
-                        totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-                    }
-                    if (totalForms) {
-                        totalForms.value = (tableBody.children.length).toString();
-                    }
+            });
+            // Initialize Select2 for product autocomplete
+            $(itemInput).select2({
+                ajax: {
+                    url: '/api/products/',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return { q: params.term };
+                    },
+                    processResults: function(data) {
+                        return {
+                            results: data.map(function(item) {
+                                return { id: item.id, text: item.name, unit_price: item.unit_price };
+                            })
+                        };
+                    },
+                    cache: true
+                },
+                minimumInputLength: 1,
+                placeholder: 'Search product...',
+                allowClear: true
+            });
+            // On product select, update unit price
+            $(itemInput).on('select2:select', function(e) {
+                var data = e.params.data;
+                var unitPriceInput = row.querySelector('.unit-price');
+                if (unitPriceInput && data.unit_price) {
+                    unitPriceInput.value = data.unit_price;
+                    updateRowTotal(row);
                     updateTotals();
-                    saveFormToStorage();
                 }
-            }
-        });
+            });
+        }
+    }
 
-        // On form submit, update TOTAL_FORMS to match visible rows, then clear localStorage
-        document.getElementById('sales-form').addEventListener('submit', function() {
-            // Update TOTAL_FORMS to match number of visible form rows (excluding template row)
-            const tableBody = document.getElementById('items-table-body');
-            const rows = Array.from(tableBody.querySelectorAll('tr')).filter(row => row.id !== 'template-row');
-            let totalForms = document.getElementById('id_form-TOTAL_FORMS');
-            if (!totalForms) {
-                totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
-            }
-            if (!totalForms) {
-                totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-            }
-            if (totalForms) {
-                totalForms.value = rows.length.toString();
-            }
-            localStorage.removeItem(STORAGE_KEY);
-            // Ensure a fresh form after save (for non-redirect cases)
-            setTimeout(function() {
-                window.location.reload();
-            }, 100);
+    // Dynamic add/remove row for formset with localStorage persistence
+    function saveFormToStorage() {
+        const rows = [];
+        document.querySelectorAll('#items-table-body tr').forEach(function(row) {
+            const item = row.querySelector('input[name*="item"]')?.value || '';
+            const unitPrice = row.querySelector('.unit-price')?.value || '';
+            const quantity = row.querySelector('.quantity')?.value || '';
+            const discount = row.querySelector('.discount')?.value || '';
+            const totalPrice = row.querySelector('.total-price')?.value || '';
+            rows.push({ item, unitPrice, quantity, discount, totalPrice });
         });
+        const invoiceFields = {
+            customer_name: document.getElementById('id_customer_name')?.value || '',
+            date_of_sale: document.getElementById('id_date_of_sale')?.value || '',
+            notes: document.getElementById('id_notes')?.value || '',
+            amount_paid: document.getElementById('id_amount_paid')?.value || ''
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows, invoiceFields }));
+    }
+
+    function restoreFormFromStorage() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        if (!data) return;
+        try {
+            const parsed = JSON.parse(data);
+            if (parsed.invoiceFields) {
+                if (document.getElementById('id_customer_name')) document.getElementById('id_customer_name').value = parsed.invoiceFields.customer_name;
+                if (document.getElementById('id_date_of_sale')) document.getElementById('id_date_of_sale').value = parsed.invoiceFields.date_of_sale;
+                if (document.getElementById('id_notes')) document.getElementById('id_notes').value = parsed.invoiceFields.notes;
+                if (document.getElementById('id_amount_paid')) document.getElementById('id_amount_paid').value = parsed.invoiceFields.amount_paid;
+            }
+            if (Array.isArray(parsed.rows) && parsed.rows.length > 0) {
+                const tableBody = document.getElementById('items-table-body');
+                let totalForms = document.getElementById('id_form-TOTAL_FORMS');
+                if (!totalForms) {
+                    totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
+                }
+                if (!totalForms) {
+                    totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+                }
+                while (tableBody.children.length > 1) tableBody.removeChild(tableBody.lastChild);
+                const firstRow = tableBody.children[0];
+                const first = parsed.rows[0];
+                if (firstRow && first) {
+                    const itemInput = firstRow.querySelector('input[name*="item"]');
+                    if (itemInput) itemInput.value = first.item;
+                    const unitPriceInput = firstRow.querySelector('.unit-price');
+                    if (unitPriceInput) unitPriceInput.value = first.unitPrice;
+                    const quantityInput = firstRow.querySelector('.quantity');
+                    if (quantityInput) quantityInput.value = first.quantity;
+                    const discountInput = firstRow.querySelector('.discount');
+                    if (discountInput) discountInput.value = first.discount;
+                    const totalPriceInput = firstRow.querySelector('.total-price');
+                    if (totalPriceInput) totalPriceInput.value = first.totalPrice;
+                }
+                for (let i = 1; i < parsed.rows.length; i++) {
+                    addNewRow();
+                    const row = tableBody.children[i];
+                    const r = parsed.rows[i];
+                    if (row && r) {
+                        const itemInput = row.querySelector('input[name*="item"]');
+                        if (itemInput) itemInput.value = r.item;
+                        const unitPriceInput = row.querySelector('.unit-price');
+                        if (unitPriceInput) unitPriceInput.value = r.unitPrice;
+                        const quantityInput = row.querySelector('.quantity');
+                        if (quantityInput) quantityInput.value = r.quantity;
+                        const discountInput = row.querySelector('.discount');
+                        if (discountInput) discountInput.value = r.discount;
+                        const totalPriceInput = row.querySelector('.total-price');
+                        if (totalPriceInput) totalPriceInput.value = r.totalPrice;
+                    }
+                }
+                if (totalForms) {
+                    totalForms.value = parsed.rows.length.toString();
+                }
+                document.querySelectorAll('#items-table-body tr').forEach(function(row) {
+                    bindRowInputs(row);
+                });
+            }
+        } catch (e) {
+            console.error('Error restoring form data:', e);
+        }
+    }
+
+    function addNewRow() {
+        const tableBody = document.getElementById('items-table-body');
+        let totalForms = document.getElementById('id_form-TOTAL_FORMS');
+        if (!totalForms) {
+            totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
+        }
+        if (!totalForms) {
+            totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        }
+        let currentCount = totalForms ? parseInt(totalForms.value) : tableBody.querySelectorAll('.form-row').length;
+        const templateRow = document.getElementById('template-row');
+        const newRow = templateRow.cloneNode(true);
+        newRow.style.display = '';
+        newRow.id = '';
+        newRow.querySelectorAll('input, select, textarea, label').forEach(function(el) {
+            if (el.name) {
+                el.name = el.name.replace(/__prefix__/, currentCount);
+            }
+            if (el.id) {
+                el.id = el.id.replace(/__prefix__/, currentCount);
+            }
+            if (el.htmlFor) {
+                el.htmlFor = el.htmlFor.replace(/__prefix__/, currentCount);
+            }
+            if (typeof el.value !== 'undefined' && el.type !== 'hidden') {
+                el.value = '';
+            }
+        });
+        tableBody.appendChild(newRow);
+        if (totalForms) {
+            totalForms.value = (currentCount + 1).toString();
+        }
+        bindRowInputs(newRow);
+        updateTotals();
+    }
+
+    const amountPaidInput = document.getElementById('id_amount_paid');
+    if (amountPaidInput) {
+        amountPaidInput.addEventListener('input', function() {
+            updateTotals();
+            saveFormToStorage();
+        });
+    }
+    ['id_customer_name', 'id_date_of_sale', 'id_notes'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', saveFormToStorage);
+            el.addEventListener('change', saveFormToStorage);
+        }
     });
+    // Bind all initial rows
+    document.querySelectorAll('#items-table-body tr').forEach(function(row) {
+        bindRowInputs(row);
+    });
+    // Restore from localStorage if present
+    restoreFormFromStorage();
+    updateTotals();
+    // Add row logic (event delegation for all add-row buttons)
+    document.getElementById('items-table-body').addEventListener('click', function(e) {
+        if (e.target.closest('.add-row')) {
+            saveFormToStorage();
+            addNewRow();
+            // Re-bind Select2 and input listeners for the new row
+            var rows = document.querySelectorAll('#items-table-body tr');
+            var lastRow = rows[rows.length - 1];
+            bindRowInputs(lastRow);
+            saveFormToStorage();
+        }
+    });
+    document.getElementById('items-table-body').addEventListener('click', function(e) {
+        if (e.target.closest('.remove-row')) {
+            const row = e.target.closest('tr');
+            const tableBody = document.getElementById('items-table-body');
+            if (tableBody.children.length > 1) {
+                row.remove();
+                let totalForms = document.getElementById('id_form-TOTAL_FORMS');
+                if (!totalForms) {
+                    totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
+                }
+                if (!totalForms) {
+                    totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+                }
+                if (totalForms) {
+                    totalForms.value = (tableBody.children.length).toString();
+                }
+                updateTotals();
+                saveFormToStorage();
+            }
+        }
+    });
+    document.getElementById('sales-form').addEventListener('submit', function() {
+        const tableBody = document.getElementById('items-table-body');
+        const rows = Array.from(tableBody.querySelectorAll('tr')).filter(row => row.id !== 'template-row');
+        let totalForms = document.getElementById('id_form-TOTAL_FORMS');
+        if (!totalForms) {
+            totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
+        }
+        if (!totalForms) {
+            totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        }
+        if (totalForms) {
+            totalForms.value = rows.length.toString();
+        }
+        localStorage.removeItem(STORAGE_KEY);
+        setTimeout(function() {
+            window.location.reload();
+        }, 100);
+    });
+});
 </script>
 {% endblock %}

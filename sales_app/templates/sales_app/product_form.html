@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="max-w-lg mx-auto mt-12 p-8 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700">
+    <h2 class="text-3xl font-extrabold mb-8 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+        <svg class="w-8 h-8 text-green-600 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        {{ action }} Product
+    </h2>
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <div class="space-y-4">
+            {% for field in form %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{{ field.label }}</label>
+                        {% if field.field.widget.input_type == "text" or field.field.widget.input_type == "number" %}
+                            {{ field|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500' }}
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
+                {% if field.errors %}
+                <p class="text-xs text-red-600 mt-1">{{ field.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="flex gap-4 justify-end mt-6">
+            <button type="submit" class="px-4 py-2 bg-green-700 hover:bg-green-800 text-white font-medium rounded-lg text-xs shadow transition whitespace-nowrap">{{ action }}</button>
+            <a href="{% url 'products_list' %}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-medium border border-gray-300 dark:border-gray-700 shadow hover:bg-gray-300 dark:hover:bg-gray-600 transition whitespace-nowrap">Cancel</a>
+        </div>
+    </form>
+            <style>
+                input[type="text"], input[type="number"], input[type="date"], select {
+                    @apply w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500;
+                }
+            </style>
+</div>
+{% endblock %}

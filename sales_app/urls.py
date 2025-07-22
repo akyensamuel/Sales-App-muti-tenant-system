@@ -11,4 +11,10 @@ urlpatterns = [
     path('invoice/<int:invoice_id>/', views.invoice_detail, name='invoice_detail'),
     path('edit_invoice/<int:invoice_id>/', views.edit_invoice, name='edit_invoice'),
     path('receipt_print/<int:invoice_id>/', views.invoice_detail, {'print_mode': True}, name='receipt_print'),
+    path('api/products/', views.product_autocomplete, name='product_autocomplete'),
+    path('products/', views.products_list, name='products'),
+    path('products/', views.products_list, name='products_list'),
+    path('products/add/', views.add_product, name='add_product'),
+    path('products/edit/<int:product_id>/', views.edit_product, name='edit_product'),
+    path('products/delete/<int:product_id>/', views.delete_product, name='delete_product'),
 ]
