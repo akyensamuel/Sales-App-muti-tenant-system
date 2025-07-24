@@ -1,3 +1,8 @@
+from django.http import JsonResponse
+from .models import Product
+
+
+
 # Product management views
 def is_manager(user):
     return user.is_authenticated and user.groups.filter(name='Managers').exists()
@@ -127,7 +132,7 @@ def delete_product(request, product_id):
 def product_autocomplete(request):
     q = request.GET.get('q', '')
     products = Product.objects.filter(name__icontains=q)[:10]
-    data = [{'id': p.id, 'name': p.name, 'unit_price': str(p.unit_price)} for p in products]
+    data = [{'id': p.id, 'name': p.name, 'unit_price': str(p.price)} for p in products]
     return JsonResponse(data, safe=False)
 
 def login_view(request):
@@ -421,3 +426,39 @@ def edit_sale(request, sale_id):
     else:
         form = SaleForm(instance=sale)
     return render(request, 'sales_app/edit_sale.html', {'form': form})
+
+
+def product_search_api(request):
+    """
+    API endpoint for Select2 product search.
+    Expects a 'q' GET parameter for the search term.
+    Returns JSON list of matching products with id, name, and price.
+    """
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        # Filter products based on the query
+        if query:
+            # Search for products whose name contains the query (case-insensitive)
+            # You might want to adjust the filter logic (e.g., startswith, icontains, full-text search)
+            products = Product.objects.filter(name__icontains=query)[:20] # Limit results for performance
+        else:
+            # Optionally, return top N products if no query (less common for search)
+            # products = Product.objects.all()[:10]
+            products = Product.objects.none() # Return empty if no query
+
+        # Serialize the data into a list of dictionaries
+        # Select2 expects 'id' and 'text'. We'll add 'unit_price' for our JS.
+        data = [
+            {
+                'id': product.id,
+                'text': product.name, # This is what Select2 displays
+                'price': str(product.price) # Convert Decimal to string for JSON, match JS expectation
+            }
+            for product in products
+        ]
+        
+        # Return the JSON response. safe=False is needed when serializing non-dict objects (like a list).
+        return JsonResponse(data, safe=False)
+    
+    # Although Select2 typically uses GET, returning an empty list for other methods is safe.
+    return JsonResponse([], safe=False)
