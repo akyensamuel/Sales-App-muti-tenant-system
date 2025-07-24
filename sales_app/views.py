@@ -82,7 +82,7 @@ from .models import Product
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ['name', 'price']
+        fields = ['name', 'price', 'stock']
 
 @login_required
 @user_passes_test(is_manager)
