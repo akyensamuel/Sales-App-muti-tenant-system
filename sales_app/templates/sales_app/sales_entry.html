@@ -90,6 +90,7 @@
         </div>
     </form>
 </div>
+
 <!-- Load jQuery and Select2 before custom JS -->
 <script src="{% static 'sales_app/js/jquery.min.js' %}"></script>
 <link href="{% static 'sales_app/css/select2.min.css' %}" rel="stylesheet" />
@@ -97,6 +98,7 @@
 <script>
 $(document).ready(function() {
     const STORAGE_KEY = 'sales_entry_form_data_v1';
+    
     function updateRowTotal(row) {
         const unitPrice = row.querySelector('.unit-price');
         const quantity = row.querySelector('.quantity');
@@ -109,6 +111,7 @@ $(document).ready(function() {
             totalPrice.value = ((up * qty) - disc).toFixed(2);
         }
     }
+    
     function updateTotals() {
         // Update all row totals first
         document.querySelectorAll('#items-table-body tr').forEach(function(row) {
@@ -129,7 +132,9 @@ $(document).ready(function() {
             balanceField.value = (grandTotal - paid).toFixed(2);
         }
     }
+    
     function bindRowInputs(row) {
+        // Bind input event listeners
         row.querySelectorAll('.unit-price, .quantity, .discount').forEach(function(input) {
             input.addEventListener('input', function() {
                 updateRowTotal(row);
@@ -137,7 +142,8 @@ $(document).ready(function() {
                 saveFormToStorage();
             });
         });
-        // Save on item select change
+        
+        // Handle item select
         const itemInput = row.querySelector('select[name*="item"]');
         if (itemInput) {
             itemInput.addEventListener('change', function() {
@@ -145,10 +151,11 @@ $(document).ready(function() {
                 updateTotals();
                 saveFormToStorage();
             });
-            // Initialize Select2 for product autocomplete
+
+            // Initialize Select2
             $(itemInput).select2({
                 ajax: {
-                    url: '/api/products/',
+                    url: '/sales/api/products/',
                     dataType: 'json',
                     delay: 250,
                     data: function(params) {
@@ -167,20 +174,61 @@ $(document).ready(function() {
                 placeholder: 'Search product...',
                 allowClear: true
             });
-            // On product select, update unit price
+
+            // Handle Select2 selection
             $(itemInput).on('select2:select', function(e) {
                 var data = e.params.data;
-                var unitPriceInput = row.querySelector('.unit-price');
-                if (unitPriceInput && data.unit_price) {
-                    unitPriceInput.value = data.unit_price;
-                    updateRowTotal(row);
+                console.log("DEBUG: select2:select event fired for itemInput:", itemInput);
+                console.log("DEBUG: Selected item data received:", data);
+
+                var rowElement = itemInput.closest('tr');
+                if (!rowElement) {
+                    console.error("DEBUG: Could not find parent row for itemInput");
+                    return;
+                }
+                console.log("DEBUG: Found parent row element:", rowElement);
+
+                var unitPriceInput = rowElement.querySelector('.unit-price');
+                console.log("DEBUG: Found unitPriceInput element:", unitPriceInput);
+                console.log("DEBUG: unitPriceInput current value (before setting):", unitPriceInput ? unitPriceInput.value : 'N/A');
+
+                if (unitPriceInput && data.unit_price !== undefined && data.unit_price !== null) {
+                    console.log("DEBUG: Conditions met. Attempting to set unit price to:", data.unit_price);
+
+                    var priceToSet = data.unit_price;
+                    unitPriceInput.value = priceToSet;
+                    console.log("DEBUG: Set unitPriceInput.value to:", priceToSet);
+
+                    unitPriceInput.setAttribute('value', priceToSet);
+                    console.log("DEBUG: Set unitPriceInput 'value' attribute to:", priceToSet);
+
+                    var inputEvent = new Event('input', {
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    var changeEvent = new Event('change', {
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    console.log("DEBUG: Dispatching 'input' event on unitPriceInput");
+                    unitPriceInput.dispatchEvent(inputEvent);
+                    console.log("DEBUG: Dispatching 'change' event on unitPriceInput");
+                    unitPriceInput.dispatchEvent(changeEvent);
+
+                    console.log("DEBUG: unitPriceInput value immediately after setting and events:", unitPriceInput.value);
+
+                    updateRowTotal(rowElement);
                     updateTotals();
+                } else {
+                    console.log("DEBUG: Condition failed. unitPriceInput exists:", !!unitPriceInput, "| data.unit_price:", data.unit_price);
+                    if (!data.unit_price) {
+                        console.log("DEBUG: data.unit_price is missing or falsy. Available data keys and values:", data);
+                    }
                 }
             });
         }
     }
 
-    // Dynamic add/remove row for formset with localStorage persistence
     function saveFormToStorage() {
         const rows = [];
         document.querySelectorAll('#items-table-body tr').forEach(function(row) {
@@ -206,57 +254,92 @@ $(document).ready(function() {
         try {
             const parsed = JSON.parse(data);
             if (parsed.invoiceFields) {
-                if (document.getElementById('id_customer_name')) document.getElementById('id_customer_name').value = parsed.invoiceFields.customer_name;
-                if (document.getElementById('id_date_of_sale')) document.getElementById('id_date_of_sale').value = parsed.invoiceFields.date_of_sale;
-                if (document.getElementById('id_notes')) document.getElementById('id_notes').value = parsed.invoiceFields.notes;
-                if (document.getElementById('id_amount_paid')) document.getElementById('id_amount_paid').value = parsed.invoiceFields.amount_paid;
+                // Restore invoice fields
+                if (parsed.invoiceFields.customer_name) {
+                    const customerNameField = document.getElementById('id_customer_name');
+                    if (customerNameField) customerNameField.value = parsed.invoiceFields.customer_name;
+                }
+                if (parsed.invoiceFields.date_of_sale) {
+                    const dateField = document.getElementById('id_date_of_sale');
+                    if (dateField) dateField.value = parsed.invoiceFields.date_of_sale;
+                }
+                if (parsed.invoiceFields.notes) {
+                    const notesField = document.getElementById('id_notes');
+                    if (notesField) notesField.value = parsed.invoiceFields.notes;
+                }
+                if (parsed.invoiceFields.amount_paid) {
+                    const amountPaidField = document.getElementById('id_amount_paid');
+                    if (amountPaidField) amountPaidField.value = parsed.invoiceFields.amount_paid;
+                }
             }
+            
             if (Array.isArray(parsed.rows) && parsed.rows.length > 0) {
                 const tableBody = document.getElementById('items-table-body');
-                let totalForms = document.getElementById('id_form-TOTAL_FORMS');
-                if (!totalForms) {
-                    totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
+                let totalForms = document.getElementById('id_form-TOTAL_FORMS') ||
+                                document.querySelector('input[name*="TOTAL_FORMS"]') ||
+                                document.querySelector('input[name$="-TOTAL_FORMS"]');
+
+                const templateRow = document.getElementById('template-row');
+                const templateRowExists = templateRow !== null;
+
+                // Remove existing data rows, but keep the first one (form-0) and the template row
+                for (let i = tableBody.children.length - 1; i >= 0; i--) {
+                    const child = tableBody.children[i];
+                    if (i === 0 || (templateRowExists && child === templateRow)) {
+                        continue;
+                    }
+                    tableBody.removeChild(child);
                 }
-                if (!totalForms) {
-                    totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-                }
-                while (tableBody.children.length > 1) tableBody.removeChild(tableBody.lastChild);
-                const firstRow = tableBody.children[0];
-                const first = parsed.rows[0];
-                if (firstRow && first) {
-                    const itemInput = firstRow.querySelector('input[name*="item"]');
-                    if (itemInput) itemInput.value = first.item;
-                    const unitPriceInput = firstRow.querySelector('.unit-price');
-                    if (unitPriceInput) unitPriceInput.value = first.unitPrice;
-                    const quantityInput = firstRow.querySelector('.quantity');
-                    if (quantityInput) quantityInput.value = first.quantity;
-                    const discountInput = firstRow.querySelector('.discount');
-                    if (discountInput) discountInput.value = first.discount;
-                    const totalPriceInput = firstRow.querySelector('.total-price');
-                    if (totalPriceInput) totalPriceInput.value = first.totalPrice;
-                }
-                for (let i = 1; i < parsed.rows.length; i++) {
-                    addNewRow();
-                    const row = tableBody.children[i];
-                    const r = parsed.rows[i];
-                    if (row && r) {
-                        const itemInput = row.querySelector('input[name*="item"]');
-                        if (itemInput) itemInput.value = r.item;
-                        const unitPriceInput = row.querySelector('.unit-price');
-                        if (unitPriceInput) unitPriceInput.value = r.unitPrice;
-                        const quantityInput = row.querySelector('.quantity');
-                        if (quantityInput) quantityInput.value = r.quantity;
-                        const discountInput = row.querySelector('.discount');
-                        if (discountInput) discountInput.value = r.discount;
-                        const totalPriceInput = row.querySelector('.total-price');
-                        if (totalPriceInput) totalPriceInput.value = r.totalPrice;
+
+                // Populate the first existing row (form-0) with data from parsed.rows[0]
+                if (tableBody.children.length > 0) {
+                    const firstRow = tableBody.children[0];
+                    const first = parsed.rows[0];
+                    if (firstRow && first) {
+                        const itemElement = firstRow.querySelector('select[name*="item"]') || firstRow.querySelector('input[name*="item"]');
+                        if (itemElement) itemElement.value = first.item;
+                        const unitPriceInput = firstRow.querySelector('.unit-price');
+                        if (unitPriceInput) unitPriceInput.value = first.unitPrice;
+                        const quantityInput = firstRow.querySelector('.quantity');
+                        if (quantityInput) quantityInput.value = first.quantity;
+                        const discountInput = firstRow.querySelector('.discount');
+                        if (discountInput) discountInput.value = first.discount;
+                        const totalPriceInput = firstRow.querySelector('.total-price');
+                        if (totalPriceInput) totalPriceInput.value = first.totalPrice;
                     }
                 }
+
+                // For each additional row needed, add a new one and populate it
+                for (let i = 1; i < parsed.rows.length; i++) {
+                    addNewRow();
+                    const rows = tableBody.querySelectorAll('.form-row');
+                    const newRow = rows[rows.length - 1];
+                    const rowData = parsed.rows[i];
+
+                    if (newRow && rowData) {
+                        const itemElement = newRow.querySelector('select[name*="item"]') || newRow.querySelector('input[name*="item"]');
+                        if (itemElement) itemElement.value = rowData.item;
+                        const unitPriceInput = newRow.querySelector('.unit-price');
+                        if (unitPriceInput) unitPriceInput.value = rowData.unitPrice;
+                        const quantityInput = newRow.querySelector('.quantity');
+                        if (quantityInput) quantityInput.value = rowData.quantity;
+                        const discountInput = newRow.querySelector('.discount');
+                        if (discountInput) discountInput.value = rowData.discount;
+                        const totalPriceInput = newRow.querySelector('.total-price');
+                        if (totalPriceInput) totalPriceInput.value = rowData.totalPrice;
+                    }
+                }
+
+                // Update the management form TOTAL_FORMS count
                 if (totalForms) {
                     totalForms.value = parsed.rows.length.toString();
                 }
+                
+                // Re-bind event listeners to all rows
                 document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-                    bindRowInputs(row);
+                    if (row.id !== 'template-row') {
+                        bindRowInputs(row);
+                    }
                 });
             }
         } catch (e) {
@@ -300,6 +383,7 @@ $(document).ready(function() {
         updateTotals();
     }
 
+    // Event listeners
     const amountPaidInput = document.getElementById('id_amount_paid');
     if (amountPaidInput) {
         amountPaidInput.addEventListener('input', function() {
@@ -307,6 +391,7 @@ $(document).ready(function() {
             saveFormToStorage();
         });
     }
+    
     ['id_customer_name', 'id_date_of_sale', 'id_notes'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el) {
@@ -314,25 +399,31 @@ $(document).ready(function() {
             el.addEventListener('change', saveFormToStorage);
         }
     });
+    
     // Bind all initial rows
     document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-        bindRowInputs(row);
+        if (row.id !== 'template-row') {
+            bindRowInputs(row);
+        }
     });
+    
     // Restore from localStorage if present
     restoreFormFromStorage();
     updateTotals();
+    
     // Add row logic (event delegation for all add-row buttons)
     document.getElementById('items-table-body').addEventListener('click', function(e) {
         if (e.target.closest('.add-row')) {
             saveFormToStorage();
             addNewRow();
-            // Re-bind Select2 and input listeners for the new row
             var rows = document.querySelectorAll('#items-table-body tr');
             var lastRow = rows[rows.length - 1];
             bindRowInputs(lastRow);
             saveFormToStorage();
         }
     });
+    
+    // Remove row logic
     document.getElementById('items-table-body').addEventListener('click', function(e) {
         if (e.target.closest('.remove-row')) {
             const row = e.target.closest('tr');
@@ -354,6 +445,8 @@ $(document).ready(function() {
             }
         }
     });
+    
+    // Form submission
     document.getElementById('sales-form').addEventListener('submit', function() {
         const tableBody = document.getElementById('items-table-body');
         const rows = Array.from(tableBody.querySelectorAll('tr')).filter(row => row.id !== 'template-row');
