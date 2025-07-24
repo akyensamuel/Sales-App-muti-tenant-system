@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
 import core.views as core_views
+
+app_name = 'sales_app'
+
 urlpatterns = [
     path('', core_views.Index.as_view(), name='home'),  # Default route
     path('logout_to_home/', core_views.logout_to_home, name='logout_to_home'),
