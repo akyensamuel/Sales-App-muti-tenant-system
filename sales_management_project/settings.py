@@ -25,8 +25,9 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+# DEBUG = "True"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS").split(" ")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost 127.0.0.1").split(" ")
 
 # Application definition
 INSTALLED_APPS = [
@@ -75,15 +76,21 @@ WSGI_APPLICATION = 'sales_management_project.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 
 database_url = os.environ.get("DATABASE_URL")
-DATABASES["default"] = dj_database_url.parse(database_url)
+
+if database_url:
+    DATABASES = {
+        "default": dj_database_url.parse(database_url)
+    }
+else:
+    # Local fallback to SQLite
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # postgresql://sales_project_database_user:y6IKtjEuru6DzgqVSyu7zpOv8eqL7thH@dpg-d20rgss9c44c738ri5c0-a.oregon-postgres.render.com/sales_project_database
