@@ -1,3 +1,5 @@
+# sales_management_project/settings.py
+
 """
 Django settings for sales_management_project project.
 
@@ -11,6 +13,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+# --- Add python-decouple import ---
+from decouple import config
+# --- End of addition ---
 import dj_database_url
 from pathlib import Path
 
@@ -21,13 +26,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY")
+# --- Updated to use config() with decouple ---
+SECRET_KEY = config('SECRET_KEY')
+# --- End of update ---
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
-# DEBUG = "True"
+# --- Updated to use config() with decouple, cast to bool, and provide default ---
+DEBUG = config('DEBUG', default=False, cast=bool)
+# --- End of update ---
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost 127.0.0.1").split(" ")
+# --- Updated to use config() with decouple and cast to list ---
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost 127.0.0.1 [::1]', cast=lambda v: [s.strip() for s in v.split(' ') if s.strip()])
+# --- End of update ---
 
 # Application definition
 INSTALLED_APPS = [
@@ -77,23 +87,22 @@ WSGI_APPLICATION = 'sales_management_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-database_url = os.environ.get("DATABASE_URL")
+# --- Updated to use config() with decouple and provide a default SQLite URL ---
+database_url = config('DATABASE_URL', default=f'sqlite:///{BASE_DIR / "db.sqlite3"}')
 
 if database_url:
     DATABASES = {
         "default": dj_database_url.parse(database_url)
     }
 else:
-    # Local fallback to SQLite
+    # Fallback (redundant now with default in config(), but kept for clarity)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-
-
-# postgresql://sales_project_database_user:y6IKtjEuru6DzgqVSyu7zpOv8eqL7thH@dpg-d20rgss9c44c738ri5c0-a.oregon-postgres.render.com/sales_project_database
+# --- End of update ---
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -119,7 +128,6 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 STATIC_URL = '/static/'
@@ -134,4 +142,5 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# WhiteNoise configuration for serving static files (suitable for production)
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

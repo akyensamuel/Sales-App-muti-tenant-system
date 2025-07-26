@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from .models import Product
-
+from django.http import HttpResponse
 
 
 # Product management views
@@ -244,22 +244,37 @@ def invoice_detail(request, invoice_id, print_mode=False):
 def edit_invoice(request, invoice_id):
     invoice = Invoice.objects.get(id=invoice_id)
     SaleFormSet = inlineformset_factory(Invoice, Sale, form=SaleForm, extra=0, can_delete=True)
+    
     if request.method == 'POST':
         form = InvoiceForm(request.POST, instance=invoice)
         formset = SaleFormSet(request.POST, instance=invoice)
+        
         if form.is_valid() and formset.is_valid():
+            # Save the invoice first
             invoice = form.save(commit=False)
             invoice.user = request.user
             invoice.save()
+            
+            # Save the formset items
             formset.instance = invoice
             formset.save()
-            invoice.total = sum(item.total_price for item in invoice.items.all())
+            
+            # Calculate and update the total AFTER saving items
+            items_total = sum(item.total_price or 0 for item in invoice.items.all())
+            invoice_discount = invoice.discount or 0
+            invoice.total = items_total - invoice_discount
             invoice.save()
+            
             return redirect('manager_dashboard')
     else:
         form = InvoiceForm(instance=invoice)
         formset = SaleFormSet(instance=invoice)
-    return render(request, 'sales_app/edit_invoice.html', {'form': form, 'formset': formset, 'invoice': invoice})
+    
+    return render(request, 'sales_app/edit_invoice.html', {
+        'form': form, 
+        'formset': formset, 
+        'invoice': invoice
+    })
 
 @user_passes_test(is_manager)
 def edit_sale(request, sale_id):
@@ -392,30 +407,6 @@ def invoice_detail(request, invoice_id, print_mode=False):
 
 @login_required
 @user_passes_test(is_manager)
-def edit_invoice(request, invoice_id):
-    invoice = Invoice.objects.get(id=invoice_id)
-    SaleFormSet = inlineformset_factory(Invoice, Sale, form=SaleForm, extra=0, can_delete=True)
-    if request.method == 'POST':
-        form = InvoiceForm(request.POST, instance=invoice)
-        formset = SaleFormSet(request.POST, instance=invoice)
-        if form.is_valid() and formset.is_valid():
-            invoice = form.save(commit=False)
-            invoice.user = request.user
-            invoice.save()
-            # Save formset, which will handle add, update, and delete
-            formset.instance = invoice
-            formset.save()
-            # Remove any Sale objects not in the formset (should be handled by can_delete)
-            # Recalculate invoice total from all current items
-            invoice.total = sum(item.total_price for item in invoice.items.all())
-            invoice.save()
-            return redirect('manager_dashboard')
-    else:
-        form = InvoiceForm(instance=invoice)
-        formset = SaleFormSet(instance=invoice)
-    return render(request, 'sales_app/edit_invoice.html', {'form': form, 'formset': formset, 'invoice': invoice})
-
-@user_passes_test(is_manager)
 def edit_sale(request, sale_id):
     sale = Sale.objects.get(id=sale_id)
     if request.method == 'POST':
@@ -462,3 +453,7 @@ def product_search_api(request):
     
     # Although Select2 typically uses GET, returning an empty list for other methods is safe.
     return JsonResponse([], safe=False)
+def test_debug(request):
+    print("=== TEST DEBUG VIEW CALLED ===")
+    print("This should appear in terminal")
+    return HttpResponse("Debug test")

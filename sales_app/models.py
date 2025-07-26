@@ -12,6 +12,11 @@ class Invoice(models.Model):
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices')
 
+    @property
+    def balance(self):
+        """Calculate the remaining balance (total - amount_paid)"""
+        return (self.total or 0) - (self.amount_paid or 0)
+
     def save(self, *args, **kwargs):
         if not self.invoice_no:
             today = timezone.now().strftime('%Y%m%d')

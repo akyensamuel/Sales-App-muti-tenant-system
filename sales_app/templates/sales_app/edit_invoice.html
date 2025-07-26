@@ -45,6 +45,7 @@
                     {{ formset.management_form }}
                     {% for form in formset %}
                     <tr class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 form-row">
+                        {{ form.id }}
                         <td class="px-4 py-2">{{ form.item|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1' }}</td>
                         <td class="px-4 py-2">{{ form.unit_price|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1 unit-price' }}</td>
                         <td class="px-4 py-2">{{ form.quantity|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1 quantity' }}</td>
@@ -59,6 +60,7 @@
                     {% endfor %}
                     <!-- Hidden template row for JS cloning: use Django formset's empty_form -->
                     <tr id="template-row" class="bg-white dark:bg-gray-800 border-b dark:border-gray-700 form-row" style="display:none;">
+                        {{ formset.empty_form.id }}
                         <td class="px-4 py-2">{{ formset.empty_form.item|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1' }}</td>
                         <td class="px-4 py-2">{{ formset.empty_form.unit_price|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1 unit-price' }}</td>
                         <td class="px-4 py-2">{{ formset.empty_form.quantity|add_class:'w-full rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-2 py-1 quantity' }}</td>
@@ -92,10 +94,10 @@
     </form>
 </div>
 <script>
-    // Dynamic add/remove row for formset with localStorage persistence
     document.addEventListener('DOMContentLoaded', function() {
-        const STORAGE_KEY = 'sales_entry_form_data_v1';
-
+        // Flag to indicate this is an edit form (not new entry)
+        const isEditMode = true;
+        
         function updateRowTotal(row) {
             const unitPrice = row.querySelector('.unit-price');
             const quantity = row.querySelector('.quantity');
@@ -111,14 +113,19 @@
 
         function updateTotals() {
             // Update all row totals first
-            document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-                updateRowTotal(row);
+            document.querySelectorAll('#items-table-body tr:not(#template-row)').forEach(function(row) {
+                if (row.style.display !== 'none') {
+                    updateRowTotal(row);
+                }
             });
             // Then sum for grand total
             let grandTotal = 0;
             document.querySelectorAll('.total-price').forEach(function(input) {
-                let val = parseFloat(input.value) || 0;
-                grandTotal += val;
+                const row = input.closest('tr');
+                if (row && row.style.display !== 'none' && row.id !== 'template-row') {
+                    let val = parseFloat(input.value) || 0;
+                    grandTotal += val;
+                }
             });
             document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
             // Update balance field
@@ -135,111 +142,21 @@
                 input.addEventListener('input', function() {
                     updateRowTotal(row);
                     updateTotals();
-                    saveFormToStorage();
                 });
             });
-            // Save on item select change
+            // Bind item select change and auto-populate unit price
             const itemInput = row.querySelector('select[name*="item"]');
             if (itemInput) {
                 itemInput.addEventListener('change', function() {
-                    updateRowTotal(row);
-                    updateTotals();
-                    saveFormToStorage();
+                    // Auto-populate unit price when item is selected
+                    const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption && selectedOption.value) {
+                        // You might want to add data attributes to options for price
+                        // For now, just trigger calculation
+                        updateRowTotal(row);
+                        updateTotals();
+                    }
                 });
-            }
-        }
-
-        // Save all form data to localStorage
-        function saveFormToStorage() {
-            const rows = [];
-            document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-                const item = row.querySelector('select[name*="item"]')?.value || '';
-                const unitPrice = row.querySelector('.unit-price')?.value || '';
-                const quantity = row.querySelector('.quantity')?.value || '';
-                const discount = row.querySelector('.discount')?.value || '';
-                const totalPrice = row.querySelector('.total-price')?.value || '';
-                rows.push({ item, unitPrice, quantity, discount, totalPrice });
-            });
-            // Invoice-level fields (no discount)
-            const invoiceFields = {
-                customer_name: document.getElementById('id_customer_name')?.value || '',
-                date_of_sale: document.getElementById('id_date_of_sale')?.value || '',
-                notes: document.getElementById('id_notes')?.value || '',
-                amount_paid: document.getElementById('id_amount_paid')?.value || ''
-            };
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows, invoiceFields }));
-        }
-
-        // Restore form data from localStorage
-        function restoreFormFromStorage() {
-            const data = localStorage.getItem(STORAGE_KEY);
-            if (!data) return;
-            try {
-                const parsed = JSON.parse(data);
-                if (parsed.invoiceFields) {
-                    if (document.getElementById('id_customer_name')) document.getElementById('id_customer_name').value = parsed.invoiceFields.customer_name;
-                    if (document.getElementById('id_date_of_sale')) document.getElementById('id_date_of_sale').value = parsed.invoiceFields.date_of_sale;
-                    if (document.getElementById('id_notes')) document.getElementById('id_notes').value = parsed.invoiceFields.notes;
-                    if (document.getElementById('id_amount_paid')) document.getElementById('id_amount_paid').value = parsed.invoiceFields.amount_paid;
-                }
-                if (Array.isArray(parsed.rows) && parsed.rows.length > 0) {
-                    const tableBody = document.getElementById('items-table-body');
-                    let totalForms = document.getElementById('id_form-TOTAL_FORMS');
-                    
-                    // If TOTAL_FORMS doesn't exist, try to find it with different selectors
-                    if (!totalForms) {
-                        totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
-                    }
-                    if (!totalForms) {
-                        totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-                    }
-                    
-                    // Remove all but the first row
-                    while (tableBody.children.length > 1) tableBody.removeChild(tableBody.lastChild);
-                    // Fill the first row
-                    const firstRow = tableBody.children[0];
-                    const first = parsed.rows[0];
-                    if (firstRow && first) {
-                        const itemInput = firstRow.querySelector('select[name*="item"]');
-                        if (itemInput) itemInput.value = first.item;
-                        const unitPriceInput = firstRow.querySelector('.unit-price');
-                        if (unitPriceInput) unitPriceInput.value = first.unitPrice;
-                        const quantityInput = firstRow.querySelector('.quantity');
-                        if (quantityInput) quantityInput.value = first.quantity;
-                        const discountInput = firstRow.querySelector('.discount');
-                        if (discountInput) discountInput.value = first.discount;
-                        const totalPriceInput = firstRow.querySelector('.total-price');
-                        if (totalPriceInput) totalPriceInput.value = first.totalPrice;
-                    }
-                    // Add and fill additional rows
-                    for (let i = 1; i < parsed.rows.length; i++) {
-                        addNewRow(); // Use the improved add row function
-                        const row = tableBody.children[i];
-                        const r = parsed.rows[i];
-                        if (row && r) {
-                            const itemInput = row.querySelector('select[name*="item"]');
-                            if (itemInput) itemInput.value = r.item;
-                            const unitPriceInput = row.querySelector('.unit-price');
-                            if (unitPriceInput) unitPriceInput.value = r.unitPrice;
-                            const quantityInput = row.querySelector('.quantity');
-                            if (quantityInput) quantityInput.value = r.quantity;
-                            const discountInput = row.querySelector('.discount');
-                            if (discountInput) discountInput.value = r.discount;
-                            const totalPriceInput = row.querySelector('.total-price');
-                            if (totalPriceInput) totalPriceInput.value = r.totalPrice;
-                        }
-                    }
-                    // Update total forms count
-                    if (totalForms) {
-                        totalForms.value = parsed.rows.length.toString();
-                    }
-                    // Re-bind input listeners for all rows after restore
-                    document.querySelectorAll('#items-table-body tr').forEach(function(row) {
-                        bindRowInputs(row);
-                    });
-                }
-            } catch (e) {
-                console.error('Error restoring form data:', e);
             }
         }
 
@@ -253,12 +170,14 @@
             if (!totalForms) {
                 totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
             }
-            let currentCount = totalForms ? parseInt(totalForms.value) : tableBody.querySelectorAll('.form-row').length;
+            let currentCount = totalForms ? parseInt(totalForms.value) : tableBody.querySelectorAll('.form-row:not(#template-row)').length;
+            
             // Use the hidden template row
             const templateRow = document.getElementById('template-row');
             const newRow = templateRow.cloneNode(true);
             newRow.style.display = '';
             newRow.id = '';
+            
             // Update all name, id, and for attributes for the new row
             newRow.querySelectorAll('input, select, textarea, label').forEach(function(el) {
                 if (el.name) {
@@ -275,6 +194,7 @@
                     el.value = '';
                 }
             });
+            
             tableBody.appendChild(newRow);
             if (totalForms) {
                 totalForms.value = (currentCount + 1).toString();
@@ -283,76 +203,64 @@
             updateTotals();
         }
 
-        // Update balance when amount paid changes and save
+        // Update balance when amount paid changes
         const amountPaidInput = document.getElementById('id_amount_paid');
         if (amountPaidInput) {
-            amountPaidInput.addEventListener('input', function() {
-                updateTotals();
-                saveFormToStorage();
-            });
+            amountPaidInput.addEventListener('input', updateTotals);
         }
-        
-        // Save on invoice-level field changes
-        ['id_customer_name', 'id_date_of_sale', 'id_notes'].forEach(function(id) {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('input', saveFormToStorage);
-                el.addEventListener('change', saveFormToStorage);
-            }
-        });
 
-        // Bind all initial rows
-        document.querySelectorAll('#items-table-body tr').forEach(function(row) {
+        // Bind all initial rows (existing data)
+        document.querySelectorAll('#items-table-body tr:not(#template-row)').forEach(function(row) {
             bindRowInputs(row);
         });
 
-        // Restore from localStorage if present
-        restoreFormFromStorage();
+        // Calculate initial totals from existing data
         updateTotals();
 
         // Add row logic (event delegation for all add-row buttons)
         document.getElementById('items-table-body').addEventListener('click', function(e) {
             if (e.target.closest('.add-row')) {
-                saveFormToStorage();
+                e.preventDefault();
                 addNewRow();
-                saveFormToStorage();
             }
         });
 
         // Remove row logic
         document.getElementById('items-table-body').addEventListener('click', function(e) {
             if (e.target.closest('.remove-row')) {
+                e.preventDefault();
                 const row = e.target.closest('tr');
                 const tableBody = document.getElementById('items-table-body');
+                
                 // Set the DELETE checkbox if present (for Django formset)
                 const deleteInput = row.querySelector('input[type="checkbox"][name*="DELETE"]');
                 if (deleteInput) {
                     deleteInput.checked = true;
                     row.style.display = 'none'; // Hide row visually
-                } else if (tableBody.children.length > 1) {
+                } else if (tableBody.querySelectorAll('tr:not(#template-row):not([style*="display: none"])').length > 1) {
                     row.remove();
-                }
-                // Update form count
-                let totalForms = document.getElementById('id_form-TOTAL_FORMS');
-                if (!totalForms) {
-                    totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
-                }
-                if (!totalForms) {
-                    totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
-                }
-                if (totalForms) {
-                    totalForms.value = (tableBody.querySelectorAll('tr:not([style*="display: none"])').length).toString();
+                    // Update form count for completely removed rows
+                    let totalForms = document.getElementById('id_form-TOTAL_FORMS');
+                    if (!totalForms) {
+                        totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
+                    }
+                    if (!totalForms) {
+                        totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+                    }
+                    if (totalForms) {
+                        const visibleRows = tableBody.querySelectorAll('tr:not(#template-row):not([style*="display: none"])').length;
+                        totalForms.value = visibleRows.toString();
+                    }
                 }
                 updateTotals();
-                saveFormToStorage();
             }
         });
 
-        // On form submit, update TOTAL_FORMS to match visible rows, then clear localStorage
-        document.getElementById('sales-form').addEventListener('submit', function() {
-            // Update TOTAL_FORMS to match number of visible form rows (excluding template row)
+        // On form submit, ensure proper form handling
+        document.getElementById('sales-form').addEventListener('submit', function(e) {
+            // Update TOTAL_FORMS to match number of form rows (including hidden ones for DELETE)
             const tableBody = document.getElementById('items-table-body');
-            const rows = Array.from(tableBody.querySelectorAll('tr')).filter(row => row.id !== 'template-row');
+            const formRows = tableBody.querySelectorAll('tr:not(#template-row)');
             let totalForms = document.getElementById('id_form-TOTAL_FORMS');
             if (!totalForms) {
                 totalForms = document.querySelector('input[name*="TOTAL_FORMS"]');
@@ -361,13 +269,13 @@
                 totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
             }
             if (totalForms) {
-                totalForms.value = rows.length.toString();
+                totalForms.value = formRows.length.toString();
             }
-            localStorage.removeItem(STORAGE_KEY);
-            // Ensure a fresh form after save (for non-redirect cases)
-            setTimeout(function() {
-                window.location.reload();
-            }, 100);
+            
+            // Don't prevent default - let Django handle the redirect
+            // Remove any localStorage interference for edit forms
+            const storageKeys = Object.keys(localStorage).filter(key => key.includes('sales_entry_form_data'));
+            storageKeys.forEach(key => localStorage.removeItem(key));
         });
     });
 </script>
