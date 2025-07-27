@@ -6,7 +6,6 @@ from pathlib import Path
 from decouple import config, Csv, UndefinedValueError
 import dj_database_url
 
-# Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # =============================================================================
@@ -15,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost 127.0.0.1 [::1]", cast=Csv())
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,[::1]", cast=Csv())
 
 # =============================================================================
 # APPLICATION CONFIGURATION
@@ -51,7 +50,7 @@ LOGIN_URL = '/sales/login/'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # Optional: for global templates
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -72,14 +71,13 @@ WSGI_APPLICATION = 'sales_management_project.wsgi.application'
 try:
     database_url = config('DATABASE_URL')
 except UndefinedValueError:
-    # Fallback for local development
     database_url = f'sqlite:///{BASE_DIR / "db.sqlite3"}'
 
 DATABASES = {
     'default': dj_database_url.parse(database_url, conn_max_age=600)
 }
 
-# Log active DB for debugging (remove in production)
+# Log active DB (remove or disable in production if needed)
 print(f"[ENV DEBUG] Active DB URL: {database_url}", file=sys.stderr)
 
 # =============================================================================
@@ -103,7 +101,7 @@ USE_I18N = True
 USE_TZ = True
 
 # =============================================================================
-# STATIC FILES
+# STATIC & MEDIA FILES
 # =============================================================================
 
 STATIC_URL = '/static/'
@@ -111,30 +109,24 @@ STATICFILES_DIRS = [BASE_DIR / 'sales_app' / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# =============================================================================
-# MEDIA FILES (optional, enable if using file uploads)
-# =============================================================================
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # =============================================================================
-# DEFAULT PRIMARY KEY FIELD TYPE
+# DEFAULT AUTO FIELD
 # =============================================================================
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # =============================================================================
-# LOGGING (optional, helps in debugging production issues)
+# LOGGING (Optional but useful)
 # =============================================================================
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
+        'console': {'class': 'logging.StreamHandler'},
     },
     'root': {
         'handlers': ['console'],
