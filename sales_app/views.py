@@ -1,140 +1,26 @@
-from django.http import JsonResponse
-from .models import Product
-from django.http import HttpResponse
-
-
-# Product management views
-def is_manager(user):
-    return user.is_authenticated and user.groups.filter(name='Managers').exists()
-
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Product
-from django import forms
-
-class ProductForm(forms.ModelForm):
-    class Meta:
-        model = Product
-        fields = ['name', 'price']
-
-@login_required
-@user_passes_test(is_manager)
-def products_list(request):
-    products = Product.objects.all().order_by('name')
-    return render(request, 'sales_app/products.html', {'products': products})
-
-@login_required
-@user_passes_test(is_manager)
-def add_product(request):
-    if request.method == 'POST':
-        form = ProductForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('products_list')
-    else:
-        form = ProductForm()
-    return render(request, 'sales_app/product_form.html', {'form': form, 'action': 'Add'})
-
-@login_required
-@user_passes_test(is_manager)
-def edit_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    if request.method == 'POST':
-        form = ProductForm(request.POST, instance=product)
-        if form.is_valid():
-            form.save()
-            return redirect('products_list')
-    else:
-        form = ProductForm(instance=product)
-    return render(request, 'sales_app/product_form.html', {'form': form, 'action': 'Edit'})
-
-@login_required
-@user_passes_test(is_manager)
-def delete_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    if request.method == 'POST':
-        product.delete()
-        return redirect('products_list')
-    return render(request, 'sales_app/product_confirm_delete.html', {'product': product})
-# Product autocomplete API for sales entry
-from django.http import JsonResponse
-
-def product_autocomplete(request):
-    q = request.GET.get('q', '')
-    products = Product.objects.filter(name__icontains=q)[:10]
-    data = [{'id': p.id, 'name': p.name, 'unit_price': str(p.price)} for p in products]
-    return JsonResponse(data, safe=False)
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .models import Invoice, Sale, AdminLog
-from django.utils import timezone
-from datetime import timedelta
-from .forms import InvoiceForm, SaleForm
-from django.forms import modelformset_factory, inlineformset_factory
+from django.http import JsonResponse, HttpResponse
 from django.db.models import Sum
+from django.utils import timezone
+from django import forms
+from decimal import Decimal
+from django.db import transaction
+from django.contrib import messages
+from django.core.exceptions import ValidationError
+from django.forms import inlineformset_factory
+
+from .models import Product, Invoice, Sale, AdminLog
+from .forms import InvoiceForm, SaleForm
 
 
+# Utility function to check if user is a manager
 def is_manager(user):
     return user.is_authenticated and user.groups.filter(name='Managers').exists()
 
-# Product management views
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import JsonResponse, HttpResponseForbidden
-from .models import Product
 
-class ProductForm(forms.ModelForm):
-    class Meta:
-        model = Product
-        fields = ['name', 'price', 'stock']
-
-@login_required
-@user_passes_test(is_manager)
-def products_list(request):
-    products = Product.objects.all().order_by('name')
-    return render(request, 'sales_app/products.html', {'products': products})
-
-@login_required
-@user_passes_test(is_manager)
-def add_product(request):
-    if request.method == 'POST':
-        form = ProductForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('products_list')
-    else:
-        form = ProductForm()
-    return render(request, 'sales_app/product_form.html', {'form': form, 'action': 'Add'})
-
-@login_required
-@user_passes_test(is_manager)
-def edit_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    if request.method == 'POST':
-        form = ProductForm(request.POST, instance=product)
-        if form.is_valid():
-            form.save()
-            return redirect('products_list')
-    else:
-        form = ProductForm(instance=product)
-    return render(request, 'sales_app/product_form.html', {'form': form, 'action': 'Edit'})
-
-@login_required
-@user_passes_test(is_manager)
-def delete_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
-    if request.method == 'POST':
-        product.delete()
-        return redirect('products_list')
-    return render(request, 'sales_app/product_confirm_delete.html', {'product': product})
-
-def product_autocomplete(request):
-    q = request.GET.get('q', '')
-    products = Product.objects.filter(name__icontains=q)[:10]
-    data = [{'id': p.id, 'name': p.name, 'unit_price': str(p.price)} for p in products]
-    return JsonResponse(data, safe=False)
-
+# === AUTH VIEWS ===
 def login_view(request):
     if request.user.is_authenticated:
         if request.user.groups.filter(name='Managers').exists():
@@ -154,54 +40,286 @@ def login_view(request):
             return render(request, 'sales_app/login.html', {'error': 'Invalid credentials'})
     return render(request, 'sales_app/login.html')
 
+
 def logout_view(request):
     logout(request)
     return redirect('login')
 
+
+# === PRODUCT MANAGEMENT VIEWS ===
+class ProductForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = ['name', 'price', 'stock']
+
+
+@login_required
+@user_passes_test(is_manager)
+def products_list(request):
+    products = Product.objects.all().order_by('name')
+    return render(request, 'sales_app/products.html', {'products': products})
+
+
+@login_required
+@user_passes_test(is_manager)
+def add_product(request):
+    if request.method == 'POST':
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('products_list')
+    else:
+        form = ProductForm()
+    return render(request, 'sales_app/product_form.html', {'form': form, 'action': 'Add'})
+
+
+@login_required
+@user_passes_test(is_manager)
+def edit_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    if request.method == 'POST':
+        form = ProductForm(request.POST, instance=product)
+        if form.is_valid():
+            form.save()
+            return redirect('products_list')
+    else:
+        form = ProductForm(instance=product)
+    return render(request, 'sales_app/product_form.html', {'form': form, 'action': 'Edit'})
+
+
+@login_required
+@user_passes_test(is_manager)
+def delete_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    if request.method == 'POST':
+        product.delete()
+        return redirect('products_list')
+    return render(request, 'sales_app/product_confirm_delete.html', {'product': product})
+
+
+# === PRODUCT SEARCH API ===
+def product_autocomplete(request):
+    q = request.GET.get('q', '')
+    products = Product.objects.filter(name__icontains=q)[:10]
+    data = [
+        {
+            'id': p.id, 
+            'name': p.name, 
+            'unit_price': str(p.price),
+            'stock': p.stock or 0  # Include stock information
+        }
+        for p in products
+    ]
+    return JsonResponse(data, safe=False)
+
+
+def product_search_api(request):
+    """
+    API endpoint for Select2 product search.
+    Expects a 'q' GET parameter for the search term.
+    Returns JSON list of matching products with id, name, price, and stock.
+    """
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        if query:
+            products = Product.objects.filter(name__icontains=query)[:20]
+        else:
+            products = Product.objects.none()
+        data = [
+            {
+                'id': product.id,
+                'text': product.name,
+                'price': str(product.price),
+                'unit_price': str(product.price),  # Keep both for compatibility
+                'stock': product.stock or 0
+            }
+            for product in products
+        ]
+        return JsonResponse(data, safe=False)
+    return JsonResponse([], safe=False)
+
+
+def validate_stock_availability(formset_data):
+    """
+    Validate that all items in the formset have sufficient stock.
+    Returns a list of error messages if validation fails.
+    """
+    errors = []
+    stock_requirements = {}  # {product_name: total_quantity_needed}
+    
+    for form_data in formset_data:
+        if form_data and not form_data.get('DELETE', False):
+            item_name = form_data.get('item')
+            quantity = form_data.get('quantity', 0)
+            
+            if item_name and quantity > 0:
+                if item_name in stock_requirements:
+                    stock_requirements[item_name] += quantity
+                else:
+                    stock_requirements[item_name] = quantity
+    
+    # Check stock availability for each product
+    for item_name, total_needed in stock_requirements.items():
+        try:
+            product = Product.objects.get(name=item_name)
+            if product.stock is None or product.stock < total_needed:
+                available = product.stock or 0
+                errors.append(
+                    f"Insufficient stock for '{item_name}'. "
+                    f"Needed: {total_needed}, Available: {available}"
+                )
+        except Product.DoesNotExist:
+            errors.append(f"Product '{item_name}' not found in inventory.")
+    
+    return errors
+
+
+def deduct_stock_for_sale_items(formset_data, invoice_no):
+    """
+    Deduct stock quantities for all items in the sale.
+    This function should be called within a database transaction.
+    """
+    stock_deductions = {}  # {product_name: total_quantity_to_deduct}
+    
+    # Calculate total deductions needed per product
+    for form_data in formset_data:
+        if form_data and not form_data.get('DELETE', False):
+            item_name = form_data.get('item')
+            quantity = form_data.get('quantity', 0)
+            
+            if item_name and quantity > 0:
+                if item_name in stock_deductions:
+                    stock_deductions[item_name] += quantity
+                else:
+                    stock_deductions[item_name] = quantity
+    
+    # Apply deductions
+    for item_name, total_deduction in stock_deductions.items():
+        try:
+            product = Product.objects.select_for_update().get(name=item_name)
+            product.stock = (product.stock or 0) - total_deduction
+            product.save()
+            
+            print(f"Stock deducted: {item_name} - {total_deduction} units. New stock: {product.stock}")
+            
+        except Product.DoesNotExist:
+            # This shouldn't happen if validation was done properly
+            print(f"WARNING: Product '{item_name}' not found during stock deduction")
+
+
+def restore_stock_for_sale_items(sale_items, invoice_no):
+    """
+    Restore stock quantities for sale items (used when deleting/editing invoices).
+    """
+    for sale_item in sale_items:
+        if sale_item.item and sale_item.quantity:
+            try:
+                product = Product.objects.select_for_update().get(name=sale_item.item)
+                product.stock = (product.stock or 0) + sale_item.quantity
+                product.save()
+                
+                print(f"Stock restored: {sale_item.item} + {sale_item.quantity} units. New stock: {product.stock}")
+                
+            except Product.DoesNotExist:
+                print(f"WARNING: Product '{sale_item.item}' not found during stock restoration")
+
+
+# === SALES ENTRY VIEW ===
 @login_required
 def sales_entry(request):
     SaleFormSet = inlineformset_factory(Invoice, Sale, form=SaleForm, extra=1, can_delete=True)
+    
     if request.method == 'POST':
+        print("=== DEBUG: Form submitted ===")
+        print("POST data:", request.POST)
+        print("save_print in POST:", 'save_print' in request.POST)
+        
         invoice_form = InvoiceForm(request.POST)
         formset = SaleFormSet(request.POST)
+        
+        print("Invoice form valid:", invoice_form.is_valid())
+        if not invoice_form.is_valid():
+            print("Invoice form errors:", invoice_form.errors)
+            
+        print("Formset valid:", formset.is_valid())
+        if not formset.is_valid():
+            print("Formset errors:", formset.errors)
+            
         if invoice_form.is_valid() and formset.is_valid():
-            invoice = invoice_form.save(commit=False)
-            invoice.user = request.user
-            total = 0
-            from decimal import Decimal
-            for form in formset:
-                if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
-                    item_total = form.cleaned_data.get('total_price')
-                    if item_total is None:
-                        item_total = Decimal('0.00')
-                    total += item_total
-            invoice.save()
-            formset.instance = invoice
-            formset.save()
-            invoice.total = sum(item.total_price for item in invoice.items.all())
-            invoice.save()
-            if 'save_print' in request.POST:
-                context = {
-                    'invoice': invoice,
-                    'items': invoice.items.all(),
-                }
-                return render(request, 'sales_app/receipt_print.html', context)
-            return redirect('sales_entry')
+            # Validate stock availability before proceeding
+            formset_data = [form.cleaned_data for form in formset if form.cleaned_data]
+            stock_errors = validate_stock_availability(formset_data)
+            
+            if stock_errors:
+                # Add error messages and re-render form
+                for error in stock_errors:
+                    messages.error(request, error)
+                print("=== DEBUG: Stock validation failed ===")
+                print("Stock errors:", stock_errors)
+            else:
+                # Use database transaction to ensure data consistency
+                try:
+                    with transaction.atomic():
+                        print("=== DEBUG: Both forms valid and stock available, saving ===")
+                        invoice = invoice_form.save(commit=False)
+                        invoice.user = request.user
+                        
+                        # Calculate total
+                        total = Decimal('0.00')
+                        for form in formset:
+                            if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                                item_total = form.cleaned_data.get('total_price') or Decimal('0.00')
+                                total += item_total
+                        
+                        invoice.save()  # Save invoice to get ID
+                        
+                        # Deduct stock before saving formset
+                        deduct_stock_for_sale_items(formset_data, invoice.invoice_no)
+                        
+                        # Save the formset
+                        formset.instance = invoice
+                        formset.save()
+                        
+                        # Recalculate total from saved items
+                        invoice.total = sum(item.total_price for item in invoice.items.all())
+                        invoice.save()
+                        
+                        messages.success(request, f'Invoice {invoice.invoice_no} saved successfully!')
+                        
+                        if 'save_print' in request.POST:
+                            print("=== DEBUG: Save and Print clicked, rendering receipt ===")
+                            context = {
+                                'invoice': invoice,
+                                'items': invoice.items.all(),
+                            }
+                            return render(request, 'sales_app/receipt_print.html', context)
+                        
+                        return redirect('sales_entry')
+                        
+                except Exception as e:
+                    # If anything goes wrong, the transaction will be rolled back
+                    messages.error(request, f'Error saving invoice: {str(e)}')
+                    print(f"=== DEBUG: Error during save: {e} ===")
+        else:
+            print("=== DEBUG: Form validation failed ===")
     else:
         invoice_form = InvoiceForm()
         formset = SaleFormSet()
+    
     return render(request, 'sales_app/sales_entry.html', {
         'invoice_form': invoice_form,
         'formset': formset
     })
 
+
+# === MANAGER DASHBOARD & INVOICE VIEWS ===
 @login_required
 @user_passes_test(is_manager)
 def manager_dashboard(request):
-    from django.db.models import Q
+    invoices = Invoice.objects.all().order_by('-date_of_sale')
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
-    invoices = Invoice.objects.all().order_by('-date_of_sale')
+
     if start_date:
         invoices = invoices.filter(date_of_sale__gte=start_date)
     if end_date:
@@ -209,25 +327,45 @@ def manager_dashboard(request):
     if not start_date and not end_date:
         today = timezone.now().date()
         invoices = invoices.filter(date_of_sale=today)
+
+    # Handle invoice deletion with stock restoration
     if request.method == 'POST' and 'delete_invoice_id' in request.POST:
         invoice_id = request.POST.get('delete_invoice_id')
         try:
-            invoice = Invoice.objects.get(id=invoice_id)
-            AdminLog.objects.create(user=request.user, action='Deleted Invoice', details=f'Invoice ID: {invoice_id}, Customer: {invoice.customer_name}')
-            invoice.delete()
+            with transaction.atomic():
+                invoice = Invoice.objects.get(id=invoice_id)
+                
+                # Restore stock for all items in the invoice
+                restore_stock_for_sale_items(invoice.items.all(), invoice.invoice_no)
+                
+                # Log the deletion
+                AdminLog.objects.create(
+                    user=request.user,
+                    action='Deleted Invoice (Stock Restored)',
+                    details=f'Invoice ID: {invoice_id}, Customer: {invoice.customer_name}'
+                )
+                
+                invoice.delete()
+                messages.success(request, f'Invoice deleted and stock quantities restored.')
+                
         except Invoice.DoesNotExist:
-            pass
+            messages.error(request, 'Invoice not found.')
+        except Exception as e:
+            messages.error(request, f'Error deleting invoice: {str(e)}')
+            
         return redirect('manager_dashboard')
+
     total_sales = invoices.aggregate(Sum('total'))['total__sum'] or 0
     return render(request, 'sales_app/manager_dashboard.html', {
         'invoices': invoices,
         'total_sales': total_sales
     })
 
+
 @login_required
 @user_passes_test(is_manager)
 def invoice_detail(request, invoice_id, print_mode=False):
-    invoice = Invoice.objects.get(id=invoice_id)
+    invoice = get_object_or_404(Invoice, id=invoice_id)
     items = invoice.items.exclude(item__isnull=True).exclude(item__exact="")
     if print_mode or request.resolver_match.url_name == 'receipt_print':
         return render(request, 'sales_app/receipt_print.html', {
@@ -239,10 +377,11 @@ def invoice_detail(request, invoice_id, print_mode=False):
         'items': items
     })
 
+
 @login_required
 @user_passes_test(is_manager)
 def edit_invoice(request, invoice_id):
-    invoice = Invoice.objects.get(id=invoice_id)
+    invoice = get_object_or_404(Invoice, id=invoice_id)
     SaleFormSet = inlineformset_factory(Invoice, Sale, form=SaleForm, extra=0, can_delete=True)
     
     if request.method == 'POST':
@@ -250,165 +389,69 @@ def edit_invoice(request, invoice_id):
         formset = SaleFormSet(request.POST, instance=invoice)
         
         if form.is_valid() and formset.is_valid():
-            # Save the invoice first
-            invoice = form.save(commit=False)
-            invoice.user = request.user
-            invoice.save()
-            
-            # Save the formset items
-            formset.instance = invoice
-            formset.save()
-            
-            # Calculate and update the total AFTER saving items
-            items_total = sum(item.total_price or 0 for item in invoice.items.all())
-            invoice_discount = invoice.discount or 0
-            invoice.total = items_total - invoice_discount
-            invoice.save()
-            
-            return redirect('manager_dashboard')
+            try:
+                with transaction.atomic():
+                    # First, restore stock for the original invoice items
+                    original_items = list(invoice.items.all())
+                    restore_stock_for_sale_items(original_items, invoice.invoice_no)
+                    
+                    # Validate stock for new/updated items
+                    formset_data = [form.cleaned_data for form in formset if form.cleaned_data]
+                    stock_errors = validate_stock_availability(formset_data)
+                    
+                    if stock_errors:
+                        # Restore the original stock deductions if validation fails
+                        for sale_item in original_items:
+                            if sale_item.item and sale_item.quantity:
+                                try:
+                                    product = Product.objects.select_for_update().get(name=sale_item.item)
+                                    product.stock = (product.stock or 0) - sale_item.quantity
+                                    product.save()
+                                except Product.DoesNotExist:
+                                    pass
+                        
+                        for error in stock_errors:
+                            messages.error(request, error)
+                        raise ValidationError("Stock validation failed")
+                    
+                    # Save the updated invoice and formset
+                    invoice = form.save(commit=False)
+                    invoice.user = request.user
+                    invoice.save()
+                    formset.save()
+                    
+                    # Deduct stock for the new/updated items
+                    deduct_stock_for_sale_items(formset_data, invoice.invoice_no)
+                    
+                    # Recalculate total after saving
+                    items_total = sum(item.total_price or 0 for item in invoice.items.all())
+                    invoice_discount = invoice.discount or 0
+                    invoice.total = items_total - invoice_discount
+                    invoice.save()
+                    
+                    messages.success(request, 'Invoice updated successfully!')
+                    return redirect('manager_dashboard')
+                    
+            except ValidationError:
+                # Error messages already added above
+                pass
+            except Exception as e:
+                messages.error(request, f'Error updating invoice: {str(e)}')
     else:
         form = InvoiceForm(instance=invoice)
         formset = SaleFormSet(instance=invoice)
-    
+        
     return render(request, 'sales_app/edit_invoice.html', {
-        'form': form, 
-        'formset': formset, 
+        'form': form,
+        'formset': formset,
         'invoice': invoice
     })
 
-@user_passes_test(is_manager)
-def edit_sale(request, sale_id):
-    sale = Sale.objects.get(id=sale_id)
-    if request.method == 'POST':
-        form = SaleForm(request.POST, instance=sale)
-        if form.is_valid():
-            form.save()
-            return redirect('manager_dashboard')
-    else:
-        form = SaleForm(instance=sale)
-    return render(request, 'sales_app/edit_sale.html', {'form': form})
-
-def login_view(request):
-    if request.user.is_authenticated:
-        if request.user.groups.filter(name='Managers').exists():
-            return redirect('manager_dashboard')
-        return redirect('sales_entry')
-
-    if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            if user.groups.filter(name='Managers').exists():
-                return redirect('manager_dashboard')
-            return redirect('sales_entry')
-        else:
-            return render(request, 'sales_app/login.html', {'error': 'Invalid credentials'})
-    return render(request, 'sales_app/login.html')
-
-def logout_view(request):
-    logout(request)
-    return redirect('login')
-
-
-
-@login_required
-def sales_entry(request):
-    # Remove 'discount' from InvoiceForm, so only per-item discount is used
-    SaleFormSet = inlineformset_factory(Invoice, Sale, form=SaleForm, extra=1, can_delete=True)
-    if request.method == 'POST':
-        invoice_form = InvoiceForm(request.POST)
-        formset = SaleFormSet(request.POST)
-        if invoice_form.is_valid() and formset.is_valid():
-            invoice = invoice_form.save(commit=False)
-            invoice.user = request.user
-            # Calculate total from formset using per-item total_price
-            total = 0
-            from decimal import Decimal
-            for form in formset:
-                if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
-                    item_total = form.cleaned_data.get('total_price')
-                    if item_total is None:
-                        item_total = Decimal('0.00')
-                    total += item_total
-            invoice.save()
-            formset.instance = invoice
-            formset.save()
-            # Now recalculate total from all saved items and update invoice
-            invoice.total = sum(item.total_price for item in invoice.items.all())
-            invoice.save()
-            if 'save_print' in request.POST:
-                context = {
-                    'invoice': invoice,
-                    'items': invoice.items.all(),
-                }
-                return render(request, 'sales_app/receipt_print.html', context)
-            return redirect('sales_entry')
-    else:
-        invoice_form = InvoiceForm()
-        formset = SaleFormSet()
-    return render(request, 'sales_app/sales_entry.html', {
-        'invoice_form': invoice_form,
-        'formset': formset
-    })
-
-
-
-
-@login_required
-@user_passes_test(is_manager)
-def manager_dashboard(request):
-    from django.db.models import Q
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    invoices = Invoice.objects.all().order_by('-date_of_sale')
-    if start_date:
-        invoices = invoices.filter(date_of_sale__gte=start_date)
-    if end_date:
-        invoices = invoices.filter(date_of_sale__lte=end_date)
-    if not start_date and not end_date:
-        today = timezone.now().date()
-        invoices = invoices.filter(date_of_sale=today)
-    # Handle delete action (delete all sales for an invoice)
-    if request.method == 'POST' and 'delete_invoice_id' in request.POST:
-        invoice_id = request.POST.get('delete_invoice_id')
-        try:
-            invoice = Invoice.objects.get(id=invoice_id)
-            AdminLog.objects.create(user=request.user, action='Deleted Invoice', details=f'Invoice ID: {invoice_id}, Customer: {invoice.customer_name}')
-            invoice.delete()
-        except Invoice.DoesNotExist:
-            pass
-        return redirect('manager_dashboard')
-    total_sales = invoices.aggregate(Sum('total'))['total__sum'] or 0
-    return render(request, 'sales_app/manager_dashboard.html', {
-        'invoices': invoices,
-        'total_sales': total_sales
-    })
-
-
-# Invoice detail view (and print mode)
-@login_required
-@user_passes_test(is_manager)
-def invoice_detail(request, invoice_id, print_mode=False):
-    invoice = Invoice.objects.get(id=invoice_id)
-    items = invoice.items.exclude(item__isnull=True).exclude(item__exact="")
-    if print_mode or request.resolver_match.url_name == 'receipt_print':
-        return render(request, 'sales_app/receipt_print.html', {
-            'invoice': invoice,
-            'items': items
-        })
-    return render(request, 'sales_app/invoice_detail.html', {
-        'invoice': invoice,
-        'items': items
-    })
-
-# Edit invoice view (edit only invoice fields, not items)
 
 @login_required
 @user_passes_test(is_manager)
 def edit_sale(request, sale_id):
-    sale = Sale.objects.get(id=sale_id)
+    sale = get_object_or_404(Sale, id=sale_id)
     if request.method == 'POST':
         form = SaleForm(request.POST, instance=sale)
         if form.is_valid():
@@ -419,40 +462,7 @@ def edit_sale(request, sale_id):
     return render(request, 'sales_app/edit_sale.html', {'form': form})
 
 
-def product_search_api(request):
-    """
-    API endpoint for Select2 product search.
-    Expects a 'q' GET parameter for the search term.
-    Returns JSON list of matching products with id, name, and price.
-    """
-    if request.method == 'GET':
-        query = request.GET.get('q', '').strip()
-        # Filter products based on the query
-        if query:
-            # Search for products whose name contains the query (case-insensitive)
-            # You might want to adjust the filter logic (e.g., startswith, icontains, full-text search)
-            products = Product.objects.filter(name__icontains=query)[:20] # Limit results for performance
-        else:
-            # Optionally, return top N products if no query (less common for search)
-            # products = Product.objects.all()[:10]
-            products = Product.objects.none() # Return empty if no query
-
-        # Serialize the data into a list of dictionaries
-        # Select2 expects 'id' and 'text'. We'll add 'unit_price' for our JS.
-        data = [
-            {
-                'id': product.id,
-                'text': product.name, # This is what Select2 displays
-                'price': str(product.price) # Convert Decimal to string for JSON, match JS expectation
-            }
-            for product in products
-        ]
-        
-        # Return the JSON response. safe=False is needed when serializing non-dict objects (like a list).
-        return JsonResponse(data, safe=False)
-    
-    # Although Select2 typically uses GET, returning an empty list for other methods is safe.
-    return JsonResponse([], safe=False)
+# === DEBUG VIEW ===
 def test_debug(request):
     print("=== TEST DEBUG VIEW CALLED ===")
     print("This should appear in terminal")

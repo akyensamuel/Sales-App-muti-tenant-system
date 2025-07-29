@@ -63,3 +63,31 @@ class Sale(models.Model):
 
     def __str__(self):
         return f"{self.item} - {self.quantity} units"
+
+class StockMovement(models.Model):
+    """
+    Track all stock movements for audit trail
+    """
+    MOVEMENT_TYPES = [
+        ('SALE', 'Sale'),
+        ('PURCHASE', 'Purchase'),
+        ('ADJUSTMENT', 'Stock Adjustment'),
+        ('RETURN', 'Return'),
+        ('RESTOCK', 'Restock'),
+    ]
+    
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='stock_movements')
+    movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPES)
+    quantity_change = models.IntegerField()  # Positive for additions, negative for reductions
+    stock_before = models.IntegerField()  # Stock level before this movement
+    stock_after = models.IntegerField()   # Stock level after this movement
+    reference = models.CharField(max_length=100, blank=True, null=True)  # Invoice number, etc.
+    notes = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.movement_type}: {self.quantity_change}"

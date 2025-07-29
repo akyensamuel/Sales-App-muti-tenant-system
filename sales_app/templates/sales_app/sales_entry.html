@@ -283,10 +283,59 @@ $(document).ready(function() {
         }
     }
     
+    function validateQuantityAgainstStock(row) {
+        const quantityInput = row.querySelector('.quantity');
+        const itemSelect = row.querySelector('select[name*="item"]');
+        
+        if (!quantityInput || !itemSelect) return true;
+        
+        const quantity = parseInt(quantityInput.value) || 0;
+        const selectedOption = $(itemSelect).select2('data')[0];
+        
+        if (selectedOption && selectedOption.stock !== undefined) {
+            const availableStock = parseInt(selectedOption.stock) || 0;
+            
+            if (quantity > availableStock) {
+                // Show warning styling
+                quantityInput.style.borderColor = '#ef4444';
+                quantityInput.style.backgroundColor = '#fef2f2';
+                
+                // Show warning message (you can customize this)
+                const existingWarning = row.querySelector('.stock-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+                
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'stock-warning text-red-600 text-xs mt-1';
+                warningDiv.textContent = `Warning: Only ${availableStock} units available in stock`;
+                quantityInput.parentNode.appendChild(warningDiv);
+                
+                return false;
+            } else {
+                // Remove warning styling
+                quantityInput.style.borderColor = '';
+                quantityInput.style.backgroundColor = '';
+                
+                const existingWarning = row.querySelector('.stock-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+                
+                return true;
+            }
+        }
+        
+        return true;
+    }
+    
     function bindRowInputs(row) {
         // Bind input event listeners
         row.querySelectorAll('.unit-price, .quantity, .discount').forEach(function(input) {
             input.addEventListener('input', function() {
+                if (input.classList.contains('quantity')) {
+                    validateQuantityAgainstStock(row);
+                }
                 updateRowTotal(row);
                 updateTotals();
                 saveFormToStorage();
@@ -297,6 +346,12 @@ $(document).ready(function() {
         const itemInput = row.querySelector('select[name*="item"]');
         if (itemInput) {
             itemInput.addEventListener('change', function() {
+                // Clear any existing stock warnings when item changes
+                const existingWarning = row.querySelector('.stock-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+                
                 updateRowTotal(row);
                 updateTotals();
                 saveFormToStorage();
@@ -314,7 +369,12 @@ $(document).ready(function() {
                     processResults: function(data) {
                         return {
                             results: data.map(function(item) {
-                                return { id: item.id, text: item.name, unit_price: item.unit_price };
+                                return { 
+                                    id: item.id, 
+                                    text: item.name + ' (Stock: ' + (item.stock || 0) + ')',
+                                    unit_price: item.unit_price,
+                                    stock: item.stock || 0
+                                };
                             })
                         };
                     },
@@ -378,6 +438,11 @@ $(document).ready(function() {
                         console.log("DEBUG: data.unit_price is missing or falsy. Available data keys and values:", data);
                     }
                 }
+                
+                // Validate quantity against stock after selection
+                setTimeout(function() {
+                    validateQuantityAgainstStock(rowElement);
+                }, 100);
             });
         }
     }
@@ -536,6 +601,40 @@ $(document).ready(function() {
         updateTotals();
     }
 
+    // Function to validate all quantities before form submission
+    function validateAllQuantities() {
+        let isValid = true;
+        const errors = [];
+        
+        document.querySelectorAll('#items-table-body tr').forEach(function(row) {
+            if (row.id === 'template-row') return;
+            
+            const quantityInput = row.querySelector('.quantity');
+            const itemSelect = row.querySelector('select[name*="item"]');
+            
+            if (!quantityInput || !itemSelect) return;
+            
+            const quantity = parseInt(quantityInput.value) || 0;
+            const selectedOption = $(itemSelect).select2('data')[0];
+            
+            if (selectedOption && selectedOption.stock !== undefined && quantity > 0) {
+                const availableStock = parseInt(selectedOption.stock) || 0;
+                const itemName = selectedOption.text.split(' (Stock:')[0]; // Extract name without stock info
+                
+                if (quantity > availableStock) {
+                    isValid = false;
+                    errors.push(`${itemName}: Requested ${quantity}, Available ${availableStock}`);
+                }
+            }
+        });
+        
+        if (!isValid) {
+            alert('Insufficient stock for the following items:\n\n' + errors.join('\n'));
+        }
+        
+        return isValid;
+    }
+
     // Event listeners
     const amountPaidInput = document.getElementById('id_amount_paid');
     if (amountPaidInput) {
@@ -599,8 +698,14 @@ $(document).ready(function() {
         }
     });
     
-    // Form submission
-    document.getElementById('sales-form').addEventListener('submit', function() {
+    // Form submission with validation
+    document.getElementById('sales-form').addEventListener('submit', function(e) {
+        // Validate quantities before allowing submission
+        if (!validateAllQuantities()) {
+            e.preventDefault();
+            return false;
+        }
+        
         const tableBody = document.getElementById('items-table-body');
         const rows = Array.from(tableBody.querySelectorAll('tr')).filter(row => row.id !== 'template-row');
         let totalForms = document.getElementById('id_form-TOTAL_FORMS');
