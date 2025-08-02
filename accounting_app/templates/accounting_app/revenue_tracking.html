@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenue Analysis - Accounting</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">
+                <i class="fas fa-trending-up mr-2"></i>Revenue Analysis
+            </h1>
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'accounting_dashboard' %}" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded transition">
+                    <i class="fas fa-dashboard mr-1"></i>Dashboard
+                </a>
+                <a href="{% url 'profit_loss_report' %}" class="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded transition">
+                    <i class="fas fa-chart-bar mr-1"></i>P&L Report
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto mt-6 px-4 max-w-7xl">
+        <!-- Monthly Revenue Trend -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">
+                <i class="fas fa-chart-line mr-2 text-blue-600"></i>Monthly Revenue Trend (Last 12 Months)
+            </h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <canvas id="revenueChart" width="400" height="300"></canvas>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4 text-gray-800">Revenue Summary</h4>
+                    <div class="space-y-3">
+                        {% for month in monthly_data|slice:":6" %}
+                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded border">
+                                <div>
+                                    <span class="font-medium text-gray-900">{{ month.month }}</span>
+                                </div>
+                                <span class="font-bold text-green-600">${{ month.revenue|floatformat:2 }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Status Overview -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-xl font-semibold text-gray-900 mb-4">
+                <i class="fas fa-credit-card mr-2 text-purple-600"></i>Payment Status Overview
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {% for status in status_breakdown %}
+                    <div class="p-4 border border-gray-200 rounded-lg">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-600 capitalize">{{ status.payment_status|title }}</span>
+                            {% if status.payment_status == 'paid' %}
+                                <i class="fas fa-check-circle text-green-500"></i>
+                            {% elif status.payment_status == 'unpaid' %}
+                                <i class="fas fa-clock text-yellow-500"></i>
+                            {% elif status.payment_status == 'partial' %}
+                                <i class="fas fa-clock text-orange-500"></i>
+                            {% elif status.payment_status == 'overdue' %}
+                                <i class="fas fa-exclamation-triangle text-red-500"></i>
+                            {% endif %}
+                        </div>
+                        <p class="text-2xl font-bold 
+                            {% if status.payment_status == 'paid' %}text-green-600
+                            {% elif status.payment_status == 'unpaid' %}text-yellow-600
+                            {% elif status.payment_status == 'partial' %}text-orange-600
+                            {% elif status.payment_status == 'overdue' %}text-red-600
+                            {% else %}text-gray-600{% endif %}">
+                            ${{ status.total|floatformat:2 }}
+                        </p>
+                        <p class="text-sm text-gray-500">{{ status.count }} invoice{{ status.count|pluralize }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Outstanding Invoices -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-gray-900">
+                    <i class="fas fa-exclamation-triangle mr-2 text-yellow-600"></i>Outstanding Invoices
+                </h3>
+                <div class="text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Requires follow-up for collection
+                </div>
+            </div>
+            
+            {% if outstanding_invoices %}
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Invoice Details
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Customer
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Amount & Status
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Outstanding
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Days Outstanding
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for invoice in outstanding_invoices %}
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900">{{ invoice.invoice_no }}</div>
+                                            <div class="text-sm text-gray-500">{{ invoice.date_of_sale|date:"M d, Y" }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">{{ invoice.customer_name|default:"N/A" }}</div>
+                                        <div class="text-sm text-gray-500">{{ invoice.user.get_full_name|default:invoice.user.username }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <div class="text-sm font-medium text-gray-900">${{ invoice.total|floatformat:2 }}</div>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                {% if invoice.payment_status == 'unpaid' %}bg-yellow-100 text-yellow-800
+                                                {% elif invoice.payment_status == 'partial' %}bg-orange-100 text-orange-800
+                                                {% elif invoice.payment_status == 'overdue' %}bg-red-100 text-red-800
+                                                {% endif %}">
+                                                {{ invoice.payment_status|title }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-bold text-red-600">${{ invoice.balance|floatformat:2 }}</div>
+                                        <div class="text-xs text-gray-500">
+                                            Paid: ${{ invoice.amount_paid|floatformat:2 }}
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        {% with days_outstanding=invoice.date_of_sale|timesince %}
+                                            <div class="text-sm 
+                                                {% if invoice.payment_status == 'overdue' %}text-red-600 font-bold
+                                                {% elif '30' in days_outstanding or '1 month' in days_outstanding %}text-orange-600
+                                                {% else %}text-gray-600{% endif %}">
+                                                {{ days_outstanding }} ago
+                                            </div>
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Outstanding Summary -->
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-clock text-yellow-600 text-xl mr-3"></i>
+                            <div>
+                                <p class="text-sm font-medium text-yellow-800">Total Outstanding</p>
+                                <p class="text-lg font-bold text-yellow-900">
+                                    ${% with total_outstanding=outstanding_invoices|add_balances %}{{ total_outstanding|floatformat:2 }}{% endwith %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle text-orange-600 text-xl mr-3"></i>
+                            <div>
+                                <p class="text-sm font-medium text-orange-800">30+ Days</p>
+                                <p class="text-lg font-bold text-orange-900">
+                                    {{ outstanding_invoices|length_if_old:30 }} invoice{{ outstanding_invoices|length_if_old:30|pluralize }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-ban text-red-600 text-xl mr-3"></i>
+                            <div>
+                                <p class="text-sm font-medium text-red-800">Overdue</p>
+                                <p class="text-lg font-bold text-red-900">
+                                    {% for invoice in outstanding_invoices %}{% if invoice.payment_status == 'overdue' %}1{% endif %}{% empty %}0{% endfor %} invoice{{ outstanding_invoices|filter_overdue|length|pluralize }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="text-center py-12">
+                    <i class="fas fa-check-circle text-green-500 text-6xl mb-4"></i>
+                    <h3 class="text-xl font-medium text-gray-900 mb-2">All Caught Up!</h3>
+                    <p class="text-gray-600">No outstanding invoices at this time.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-12 bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2024 Sales Management System - Revenue Analysis</p>
+        </div>
+    </footer>
+
+    <script>
+        // Create revenue trend chart
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [
+                    {% for month in monthly_data %}
+                        '{{ month.month }}'{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                datasets: [{
+                    label: 'Monthly Revenue',
+                    data: [
+                        {% for month in monthly_data %}
+                            {{ month.revenue }}{% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    ],
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#3B82F6',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Revenue: $' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

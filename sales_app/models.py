@@ -3,19 +3,42 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 
 class Invoice(models.Model):
+    PAYMENT_STATUS_CHOICES = [
+        ('paid', 'Paid'),
+        ('unpaid', 'Unpaid'),
+        ('partial', 'Partially Paid'),
+        ('overdue', 'Overdue'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
     invoice_no = models.CharField(max_length=20, unique=True, editable=False, null=True, blank=True)
     customer_name = models.CharField(max_length=255, null=True, blank=True)
     date_of_sale = models.DateField(default=timezone.now, null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0, null=True, blank=True)
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0, null=True, blank=True)
+    payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices')
 
     @property
     def balance(self):
         """Calculate the remaining balance (total - amount_paid)"""
         return (self.total or 0) - (self.amount_paid or 0)
+    
+    def update_payment_status(self):
+        """Automatically update payment status based on amount paid"""
+        if self.amount_paid == 0:
+            self.payment_status = 'unpaid'
+        elif self.amount_paid >= self.total:
+            self.payment_status = 'paid'
+        else:
+            self.payment_status = 'partial'
+        
+        # Check for overdue status
+        if self.due_date and timezone.now().date() > self.due_date and self.payment_status != 'paid':
+            self.payment_status = 'overdue'
 
     def save(self, *args, **kwargs):
         if not self.invoice_no:

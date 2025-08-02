@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if is_edit %}Edit{% else %}Add{% endif %} Expense - Accounting</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">
+                <i class="fas fa-{% if is_edit %}edit{% else %}plus{% endif %} mr-2"></i>
+                {% if is_edit %}Edit Expense{% else %}Add New Expense{% endif %}
+            </h1>
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'expense_list' %}" class="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded transition">
+                    <i class="fas fa-list mr-1"></i>All Expenses
+                </a>
+                <a href="{% url 'accounting_dashboard' %}" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded transition">
+                    <i class="fas fa-dashboard mr-1"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto mt-6 px-4 max-w-4xl">
+        <!-- Form Card -->
+        <div class="bg-white rounded-lg shadow-md p-8">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">
+                    {% if is_edit %}
+                        <i class="fas fa-edit mr-2 text-blue-600"></i>Update Expense Details
+                    {% else %}
+                        <i class="fas fa-plus-circle mr-2 text-green-600"></i>Record New Business Expense
+                    {% endif %}
+                </h2>
+                <p class="text-gray-600 mt-2">
+                    {% if is_edit %}
+                        Modify the expense information below and save your changes.
+                    {% else %}
+                        Fill out the form below to record a new business expense for accurate financial tracking.
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Display Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-50 border border-red-200 text-red-700{% else %}bg-green-50 border border-green-200 text-green-700{% endif %}">
+                        <i class="fas fa-{% if message.tags == 'error' %}exclamation-circle{% else %}check-circle{% endif %} mr-2"></i>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Basic Information -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Amount -->
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-dollar-sign mr-1 text-green-600"></i>Amount *
+                        </label>
+                        <input type="number" step="0.01" min="0" id="amount" name="amount" 
+                               value="{% if expense %}{{ expense.amount }}{% endif %}" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="0.00">
+                    </div>
+
+                    <!-- Date -->
+                    <div>
+                        <label for="date" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-calendar mr-1 text-blue-600"></i>Expense Date *
+                        </label>
+                        <input type="date" id="date" name="date" 
+                               value="{% if expense %}{{ expense.date|date:'Y-m-d' }}{% else %}{{ today|date:'Y-m-d' }}{% endif %}" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- Category Selection -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Existing Category -->
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-tags mr-1 text-purple-600"></i>Category
+                        </label>
+                        <select id="category" name="category" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select existing category</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" 
+                                        {% if expense and expense.category.id == category.id %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- New Category -->
+                    <div>
+                        <label for="category_name" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-plus mr-1 text-green-600"></i>Or Create New Category
+                        </label>
+                        <input type="text" id="category_name" name="category_name" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Enter new category name">
+                        <p class="text-xs text-gray-500 mt-1">Leave empty to use selected category above</p>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-comment mr-1 text-gray-600"></i>Description *
+                    </label>
+                    <input type="text" id="description" name="description" 
+                           value="{% if expense %}{{ expense.description }}{% endif %}" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Brief description of the expense">
+                </div>
+
+                <!-- Vendor and Payment Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Vendor -->
+                    <div>
+                        <label for="vendor" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-store mr-1 text-orange-600"></i>Vendor/Supplier
+                        </label>
+                        <input type="text" id="vendor" name="vendor" 
+                               value="{% if expense %}{{ expense.vendor }}{% endif %}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Company or person paid">
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div>
+                        <label for="payment_method" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-credit-card mr-1 text-indigo-600"></i>Payment Method
+                        </label>
+                        <select id="payment_method" name="payment_method" 
+                                class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="cash" {% if expense and expense.payment_method == 'cash' %}selected{% endif %}>Cash</option>
+                            <option value="card" {% if expense and expense.payment_method == 'card' %}selected{% endif %}>Credit/Debit Card</option>
+                            <option value="bank" {% if expense and expense.payment_method == 'bank' %}selected{% endif %}>Bank Transfer</option>
+                            <option value="cheque" {% if expense and expense.payment_method == 'cheque' %}selected{% endif %}>Cheque</option>
+                            <option value="other" {% if expense and expense.payment_method == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Reference Number -->
+                <div>
+                    <label for="reference_number" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-hashtag mr-1 text-gray-600"></i>Reference Number
+                    </label>
+                    <input type="text" id="reference_number" name="reference_number" 
+                           value="{% if expense %}{{ expense.reference_number }}{% endif %}"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Invoice #, Receipt #, Transaction ID, etc.">
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sticky-note mr-1 text-yellow-600"></i>Additional Notes
+                    </label>
+                    <textarea id="notes" name="notes" rows="3"
+                              class="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Any additional details about this expense...">{% if expense %}{{ expense.notes }}{% endif %}</textarea>
+                </div>
+
+                <!-- Recurring Expense Option -->
+                <div class="flex items-center">
+                    <input type="checkbox" id="is_recurring" name="is_recurring" 
+                           {% if expense and expense.is_recurring %}checked{% endif %}
+                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="is_recurring" class="ml-3 text-sm font-medium text-gray-700">
+                        <i class="fas fa-repeat mr-1 text-blue-600"></i>This is a recurring expense
+                    </label>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                    <a href="{% url 'expense_list' %}" 
+                       class="px-6 py-3 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 font-medium transition">
+                        <i class="fas fa-times mr-2"></i>Cancel
+                    </a>
+                    <button type="submit" 
+                            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition">
+                        <i class="fas fa-save mr-2"></i>
+                        {% if is_edit %}Update Expense{% else %}Save Expense{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Help Section -->
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-900 mb-3">
+                <i class="fas fa-info-circle mr-2"></i>Expense Tracking Tips
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
+                <div>
+                    <h4 class="font-medium mb-2">Categories</h4>
+                    <ul class="space-y-1 text-blue-700">
+                        <li>• Office Supplies</li>
+                        <li>• Travel & Transport</li>
+                        <li>• Marketing & Advertising</li>
+                        <li>• Utilities</li>
+                        <li>• Professional Services</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-medium mb-2">Best Practices</h4>
+                    <ul class="space-y-1 text-blue-700">
+                        <li>• Always include receipt references</li>
+                        <li>• Be descriptive in your notes</li>
+                        <li>• Record expenses promptly</li>
+                        <li>• Use consistent vendor names</li>
+                        <li>• Mark recurring expenses appropriately</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-12 bg-gray-800 text-white py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>&copy; 2024 Sales Management System - Expense Tracking</p>
+        </div>
+    </footer>
+
+    <script>
+        // Auto-clear opposite field when one is selected
+        document.getElementById('category').addEventListener('change', function() {
+            if (this.value) {
+                document.getElementById('category_name').value = '';
+            }
+        });
+
+        document.getElementById('category_name').addEventListener('input', function() {
+            if (this.value) {
+                document.getElementById('category').value = '';
+            }
+        });
+
+        // Set today's date as default if creating new expense
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if not is_edit %}
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('date').value = today;
+            {% endif %}
+        });
+    </script>
+</body>
+</html>

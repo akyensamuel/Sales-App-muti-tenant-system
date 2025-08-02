@@ -41,7 +41,37 @@ A comprehensive Django-based sales management system with advanced features for 
   - Standard A4 invoice printing for business records
   - Print-friendly layouts with proper formatting
 
-### 🔍 **Advanced Search & Filtering**
+### � **Accounting & Financial Management**
+- **Comprehensive Financial Dashboard:**
+  - Monthly revenue and expense tracking
+  - Real-time profit & loss calculations
+  - Outstanding invoice monitoring
+  - Financial KPI cards with visual indicators
+  - Quick access to all accounting functions
+
+- **Expense Management:**
+  - Detailed expense tracking with categories
+  - Receipt file upload and storage
+  - Vendor and payment method tracking
+  - Recurring expense marking
+  - Advanced filtering and search capabilities
+  - Bulk expense operations
+
+- **Financial Reporting:**
+  - **Profit & Loss Reports:** Monthly and annual P&L statements
+  - **Revenue Analysis:** 12-month revenue trends with charts
+  - **Expense Breakdown:** Category-wise expense analysis
+  - **Outstanding Invoices:** Payment status tracking and aging reports
+  - **Tax Preparation:** Automated tax calculations and reporting
+
+- **Audit Trail & Compliance:**
+  - Complete audit log of all financial activities
+  - User action tracking with timestamps
+  - IP address logging for security
+  - Comprehensive change history
+  - Export capabilities for external auditing
+
+### 📊 **Advanced Search & Filtering**
 - **Multi-Parameter Search:**
   - Customer name search (partial matching)
   - Invoice number search
@@ -158,6 +188,15 @@ sales_management_project/
 │   ├── 📝 forms.py            # Advanced form definitions
 │   └── 🔗 urls.py             # URL routing and patterns
 ├── 🏢 accounting_app/         # Financial management (Admin only)
+│   ├── 🎨 templates/accounting_app/
+│   │   ├── dashboard.html      # Financial overview dashboard
+│   │   ├── expense_list.html   # Expense management interface
+│   │   ├── expense_form.html   # Expense creation/editing form
+│   │   ├── profit_loss_report.html # P&L statement template
+│   │   └── revenue_tracking.html   # Revenue analysis dashboard
+│   ├── 🔧 models.py           # Financial models (Expense, ProfitLoss, etc.)
+│   ├── 🎭 views.py            # Financial business logic
+│   └── 🔗 urls.py             # Accounting URL patterns
 ├── 🎨 core/                   # Shared components and utilities
 │   ├── 🧩 templatetags/       # Custom template filters and tags
 │   └── 📋 templates/core/     # Base templates and navigation
@@ -170,10 +209,15 @@ sales_management_project/
 
 ### **Database Models**
 - **Product:** Inventory items with pricing and stock levels
-- **Invoice:** Main sales record with customer and payment info
+- **Invoice:** Main sales record with customer and payment info (enhanced with status tracking)
 - **Sale:** Individual line items within invoices
 - **AdminLog:** Audit trail for administrative actions
 - **StockMovement:** Inventory change tracking
+- **ExpenseCategory:** Categorization for business expenses
+- **Expense:** Detailed expense records with receipts and vendor info
+- **ProfitLossSnapshot:** Monthly financial performance snapshots
+- **TaxSettings:** Configurable tax rates and calculations
+- **AccountingAuditLog:** Comprehensive audit trail for financial operations
 
 ## 🚀 **Installation & Setup**
 
@@ -254,6 +298,12 @@ sales_management_project/
 | Print Reports | ✅ | ✅ | ❌ |
 | Product Management | ✅ | ❌ | ❌ |
 | User Management | ✅ | ❌ | ❌ |
+| **Accounting Dashboard** | ✅ | ❌ | ❌ |
+| **Expense Management** | ✅ | ❌ | ❌ |
+| **Financial Reports** | ✅ | ❌ | ❌ |
+| **P&L Analysis** | ✅ | ❌ | ❌ |
+| **Revenue Tracking** | ✅ | ❌ | ❌ |
+| **Audit Logs** | ✅ | ❌ | ❌ |
 | Accounting Dashboard | ✅ | ❌ | ❌ |
 
 ## 🖨️ **Print Setup & Configuration**
@@ -308,6 +358,62 @@ DATABASE_URL=sqlite:///db.sqlite3
 2. Apply customer or invoice filters if needed
 3. Click appropriate print button
 4. Review report in new tab before printing
+
+### **Using the Accounting Module:**
+1. Access Accounting Dashboard (Admin only)
+2. View financial overview and KPIs
+3. Add expenses with categories and receipts
+4. Generate P&L reports for any period
+5. Track revenue trends and payment status
+6. Monitor outstanding invoices
+
+## 💰 **Accounting Module Guide**
+
+### **Financial Dashboard:**
+- **Overview Cards:** Monthly revenue, expenses, profit, and outstanding amounts
+- **Quick Actions:** Direct access to expense creation and management
+- **Recent Activity:** Latest expenses and financial transactions
+- **Navigation:** Easy access to all accounting features
+
+### **Expense Management:**
+1. **Adding Expenses:**
+   - Choose existing category or create new one
+   - Enter amount, date, and description
+   - Add vendor and payment method information
+   - Include reference numbers and notes
+   - Mark recurring expenses for tracking
+
+2. **Expense Categories:**
+   - Office Supplies, Travel & Transport, Marketing
+   - Utilities, Professional Services, Equipment
+   - Rent & Facilities, Insurance, Training
+   - Customizable categories for specific business needs
+
+3. **Filtering & Search:**
+   - Filter by category, date range, payment method
+   - Search descriptions, vendors, and notes
+   - Export filtered results for analysis
+
+### **Financial Reports:**
+1. **Profit & Loss Reports:**
+   - Monthly or annual P&L statements
+   - Revenue vs. expense breakdowns
+   - Profit margin calculations
+   - Category-wise expense analysis
+   - Printable professional format
+
+2. **Revenue Analysis:**
+   - 12-month revenue trend charts
+   - Payment status overview
+   - Outstanding invoice tracking
+   - Collection aging reports
+
+### **Audit & Compliance:**
+- Complete audit trail of all financial activities
+- User action logging with timestamps
+- Change history tracking
+- Export capabilities for external auditing
+- IP address logging for security
 
 ## 🔍 **Search Features Guide**
 
@@ -372,14 +478,29 @@ MIT License - see LICENSE file for details
 
 ## 🚀 **Future Enhancements**
 
+### **Sales & Inventory:**
 - PDF export functionality
 - Email invoice delivery
 - Advanced inventory management
-- Customer relationship management
+- Barcode scanning integration
 - Multi-location support
+
+### **Accounting & Finance:**
+- Automated tax calculations and filing
+- Bank integration for transaction import
+- Advanced financial forecasting
+- Budget planning and variance analysis
+- Integration with accounting software (QuickBooks, Xero)
+- Automated recurring expense handling
+- Advanced financial dashboards with charts
+- Cash flow analysis and projections
+
+### **System & Integration:**
+- Customer relationship management
 - API development for integrations
 - Advanced analytics and dashboards
-- Barcode scanning integration
+- Multi-currency support
+- Cloud deployment options
 
 ---
 
