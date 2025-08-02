@@ -133,5 +133,6 @@ LOGGING = {
         'level': 'INFO',
     },
 }
-
-print(f"[DEBUG] DATABASE_URL: {database_url}", file=sys.stderr)
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
