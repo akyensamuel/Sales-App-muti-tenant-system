@@ -1,8 +1,10 @@
 from django.contrib.auth import logout
 from django.shortcuts import redirect
+
 def logout_to_home(request):
     logout(request)
-    return redirect('home')
+    return redirect('core:index')
+
 from django.views import View
 from django.shortcuts import render
 
