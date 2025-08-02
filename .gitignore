@@ -1,6 +1,34 @@
 *.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
 db.sqlite3
-node_modules
+node_modules/
 virtual/
 .env
 supabase.txt
+
+# Test outputs
+tests/output/
+*.log
+coverage.xml
+htmlcov/
+.coverage
+.pytest_cache/
+.tox/
+
+# Documentation outputs
+docs/output/
+*.pdf
+docs/**/*.pdf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

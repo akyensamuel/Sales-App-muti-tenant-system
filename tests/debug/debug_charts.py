@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import os
 import sys
-import django
+from pathlib import Path
 
-# Setup Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sales_management_project.settings')
-sys.path.append('d:\\code\\Sales_App\\sales_management_project')
-django.setup()
+# Add tests directory to path and setup Django
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from django_setup import setup_django
+setup_django()
 
 from sales_app.models import Invoice
 from accounting_app.models import Expense
