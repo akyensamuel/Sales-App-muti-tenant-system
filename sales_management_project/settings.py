@@ -133,3 +133,5 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+print(f"[DEBUG] DATABASE_URL: {database_url}", file=sys.stderr)

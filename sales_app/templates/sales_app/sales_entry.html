@@ -718,10 +718,12 @@ $(document).ready(function() {
         if (totalForms) {
             totalForms.value = rows.length.toString();
         }
+        
+        // Clear localStorage on successful submission
         localStorage.removeItem(STORAGE_KEY);
-        setTimeout(function() {
-            window.location.reload();
-        }, 100);
+        
+        // Allow the form to submit normally - don't reload the page
+        // The Django view will handle the response (redirect or print page)
     });
 });
 </script>

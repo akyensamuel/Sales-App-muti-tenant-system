@@ -398,6 +398,88 @@ def manager_dashboard(request):
 
 @login_required
 @user_passes_test(is_manager)
+def print_daily_invoices(request):
+    """Print all invoices for a specific date"""
+    date_str = request.GET.get('date')
+    if not date_str:
+        # Default to today
+        print_date = timezone.now().date()
+    else:
+        try:
+            from datetime import datetime
+            print_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            print_date = timezone.now().date()
+    
+    invoices = Invoice.objects.filter(date_of_sale=print_date).order_by('invoice_no')
+    total_sales = invoices.aggregate(Sum('total'))['total__sum'] or 0
+    
+    context = {
+        'invoices': invoices,
+        'total_sales': total_sales,
+        'print_date': print_date,
+        'print_type': 'daily'
+    }
+    return render(request, 'sales_app/invoices_print.html', context)
+
+
+@login_required
+@user_passes_test(is_manager)
+def print_search_results(request):
+    """Print search results from manager dashboard"""
+    # Get the same search parameters as manager_dashboard
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    customer_name = request.GET.get('customer_name', '').strip()
+    invoice_no = request.GET.get('invoice_no', '').strip()
+    
+    invoices = Invoice.objects.all().order_by('-date_of_sale')
+    
+    # Apply the same search logic as manager_dashboard
+    has_search_params = any([start_date, end_date, customer_name, invoice_no])
+    
+    if has_search_params:
+        from django.db.models import Q
+        search_conditions = Q()
+        
+        if start_date and end_date:
+            search_conditions |= Q(date_of_sale__gte=start_date, date_of_sale__lte=end_date)
+        elif start_date:
+            search_conditions |= Q(date_of_sale__gte=start_date)
+        elif end_date:
+            search_conditions |= Q(date_of_sale__lte=end_date)
+        
+        if customer_name:
+            search_conditions |= Q(customer_name__icontains=customer_name)
+        
+        if invoice_no:
+            search_conditions |= Q(invoice_no__icontains=invoice_no)
+        
+        if search_conditions:
+            invoices = invoices.filter(search_conditions)
+    else:
+        # If no search params, show today's invoices
+        today = timezone.now().date()
+        invoices = invoices.filter(date_of_sale=today)
+    
+    total_sales = invoices.aggregate(Sum('total'))['total__sum'] or 0
+    
+    context = {
+        'invoices': invoices,
+        'total_sales': total_sales,
+        'search_params': {
+            'start_date': start_date,
+            'end_date': end_date,
+            'customer_name': customer_name,
+            'invoice_no': invoice_no,
+        },
+        'print_type': 'search'
+    }
+    return render(request, 'sales_app/invoices_print.html', context)
+
+
+@login_required
+@user_passes_test(is_manager)
 def invoice_detail(request, invoice_id, print_mode=False):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     items = invoice.items.exclude(item__isnull=True).exclude(item__exact="")

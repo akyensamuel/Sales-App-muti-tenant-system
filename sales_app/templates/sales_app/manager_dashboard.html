@@ -1,169 +1,341 @@
 {% extends "core/base.html" %}
 {% block content %}
 <div class="max-w-5xl mx-auto mt-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
-    <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Manager Dashboard</h2>
-        <div class="flex gap-2">
-            <a href="{% url 'sales_entry' %}" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Make Sale</a>
-            {% load group_filters %}
-            {% if request.user|has_group:'Admin' %}
-            <a href="{% url 'products' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white font-medium rounded-lg text-xs shadow transition whitespace-nowrap focus:ring-2 focus:ring-purple-300 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-800">
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18"/></svg>
-                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#F59E42"/><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18"/></svg>
-                <span class="font-semibold text-orange-200">Products & Prices</span>
-            </a>
-            {% endif %}
+    <!-- Header Section -->
+    <div class="border-b border-gray-200 dark:border-gray-700 pb-6 mb-6">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-gray-100">Manager Dashboard</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Sales management and reporting tools
+                </p>
+            </div>
+            
+            <!-- Primary Action Buttons -->
+            <div class="flex flex-wrap gap-4">
+                <a href="{% url 'sales_entry' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow transition focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    New Sale
+                </a>
+                
+                {% load group_filters %}
+                {% if request.user|has_group:'Admin' %}
+                <a href="{% url 'products' %}" class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm shadow transition focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    Products & Inventory
+                </a>
+                {% endif %}
+            </div>
         </div>
     </div>
-    <form method="get" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
-        <div class="mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Search Invoices</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Search by any combination of the fields below. Results will include invoices matching any of the criteria (OR search).
-            </p>
+
+    <!-- Search and Filter Section -->
+    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm mb-6">
+        <div class="p-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Search & Filter Invoices</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        Search by any combination of fields below. Results include invoices matching any criteria (OR search).
+                    </p>
+                </div>
+                
+                <!-- Print Controls -->
+                <div class="flex flex-wrap gap-3 mt-4 lg:mt-0">
+                    <button onclick="printTodaysInvoices()" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded text-sm shadow transition focus:ring-2 focus:ring-green-500">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        </svg>
+                        Print Today
+                    </button>
+                    
+                    <button onclick="printSearchResults()" class="inline-flex items-center px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded text-sm shadow transition focus:ring-2 focus:ring-orange-500">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        </svg>
+                        Print Results
+                    </button>
+                    
+                    <div class="relative">
+                        <button onclick="toggleDatePicker()" class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded text-sm shadow transition focus:ring-2 focus:ring-indigo-500">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            Print Date
+                        </button>
+                        <div id="datePicker" class="hidden absolute right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 z-10 min-w-[200px]">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Select Date:</label>
+                            <input type="date" id="printDate" class="w-full rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm mb-3">
+                            <button onclick="printSpecificDate()" class="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-sm font-medium">Print</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <form method="get" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Date Range Search -->
+                    <div>
+                        <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Start Date</label>
+                        <input type="date" id="start_date" name="start_date" 
+                               value="{{ search_params.start_date|default:'' }}" 
+                               class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
+                    </div>
+                    
+                    <div>
+                        <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">End Date</label>
+                        <input type="date" id="end_date" name="end_date" 
+                               value="{{ search_params.end_date|default:'' }}" 
+                               class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
+                    </div>
+                    
+                    <!-- Customer Name Search -->
+                    <div>
+                        <label for="customer_name" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Customer Name</label>
+                        <input type="text" id="customer_name" name="customer_name" 
+                               value="{{ search_params.customer_name|default:'' }}" 
+                               placeholder="Enter customer name..." 
+                               class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
+                    </div>
+                    
+                    <!-- Invoice Number Search -->
+                    <div>
+                        <label for="invoice_no" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Invoice Number</label>
+                        <input type="text" id="invoice_no" name="invoice_no" 
+                               value="{{ search_params.invoice_no|default:'' }}" 
+                               placeholder="Enter invoice number..." 
+                               class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" />
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 pt-2">
+                    <button type="submit" class="inline-flex items-center justify-center px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow transition focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        Search Invoices
+                    </button>
+                    
+                    <a href="{% url 'manager_dashboard' %}" class="inline-flex items-center justify-center px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm shadow transition focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Clear & Show Today
+                    </a>
+                </div>
+            </form>
         </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <!-- Date Range Search -->
-            <div>
-                <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Start Date</label>
-                <input type="date" id="start_date" name="start_date" 
-                       value="{{ search_params.start_date|default:'' }}" 
-                       class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-            </div>
-            
-            <div>
-                <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">End Date</label>
-                <input type="date" id="end_date" name="end_date" 
-                       value="{{ search_params.end_date|default:'' }}" 
-                       class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-            </div>
-            
-            <!-- Customer Name Search -->
-            <div>
-                <label for="customer_name" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Customer Name</label>
-                <input type="text" id="customer_name" name="customer_name" 
-                       value="{{ search_params.customer_name|default:'' }}" 
-                       placeholder="Enter customer name..." 
-                       class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-            </div>
-            
-            <!-- Invoice Number Search -->
-            <div>
-                <label for="invoice_no" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Invoice Number</label>
-                <input type="text" id="invoice_no" name="invoice_no" 
-                       value="{{ search_params.invoice_no|default:'' }}" 
-                       placeholder="Enter invoice number..." 
-                       class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-            </div>
-        </div>
-        
-        <!-- Action Buttons -->
-        <div class="flex flex-col sm:flex-row gap-3">
-            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow transition focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-                Search Invoices
-            </button>
-            
-            <a href="{% url 'manager_dashboard' %}" class="inline-flex items-center justify-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm shadow transition focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                Clear & Show Today
-            </a>
-        </div>
-    </form>
-    
+    </div>
+
     <!-- Search Results Summary -->
     {% if search_params.start_date or search_params.end_date or search_params.customer_name or search_params.invoice_no %}
-    <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-        <div class="flex items-center justify-between">
+    <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div>
-                <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">Search Results</h4>
-                <div class="text-xs text-blue-700 dark:text-blue-300">
-                    Searched for:
+                <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-2">Active Search Filters</h4>
+                <div class="flex flex-wrap gap-2">
                     {% if search_params.start_date %}
-                        <span class="inline-block bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded mr-1">From: {{ search_params.start_date }}</span>
+                        <span class="inline-flex items-center px-2 py-1 bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded-full text-xs font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            From: {{ search_params.start_date }}
+                        </span>
                     {% endif %}
                     {% if search_params.end_date %}
-                        <span class="inline-block bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded mr-1">To: {{ search_params.end_date }}</span>
+                        <span class="inline-flex items-center px-2 py-1 bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded-full text-xs font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            To: {{ search_params.end_date }}
+                        </span>
                     {% endif %}
                     {% if search_params.customer_name %}
-                        <span class="inline-block bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded mr-1">Customer: "{{ search_params.customer_name }}"</span>
+                        <span class="inline-flex items-center px-2 py-1 bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded-full text-xs font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                            Customer: "{{ search_params.customer_name }}"
+                        </span>
                     {% endif %}
                     {% if search_params.invoice_no %}
-                        <span class="inline-block bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded mr-1">Invoice: "{{ search_params.invoice_no }}"</span>
+                        <span class="inline-flex items-center px-2 py-1 bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded-full text-xs font-medium">
+                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            Invoice: "{{ search_params.invoice_no }}"
+                        </span>
                     {% endif %}
                 </div>
             </div>
             <div class="text-right">
-                <div class="text-lg font-bold text-blue-800 dark:text-blue-200">{{ invoices|length }} result{{ invoices|length|pluralize }}</div>
-                <div class="text-xs text-blue-600 dark:text-blue-400">found</div>
+                <div class="text-2xl font-bold text-blue-800 dark:text-blue-200">{{ invoices|length }}</div>
+                <div class="text-xs text-blue-600 dark:text-blue-400">result{{ invoices|length|pluralize }} found</div>
             </div>
         </div>
     </div>
     {% endif %}
-    
-    <p class="mb-4 text-lg text-gray-700 dark:text-gray-200">Total Sales: <span class="font-semibold">${{ total_sales }}</span></p>
-    <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead class="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Invoice No</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Customer Name</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date of Sale</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">User</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Amount Paid</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Balance</th>
-                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {% for invoice in invoices %}
-                <tr class="hover:bg-blue-50 dark:hover:bg-gray-700 cursor-pointer invoice-row" data-invoice-url="{% url 'invoice_detail' invoice.id %}">
-                    <td class="px-4 py-2">{{ invoice.invoice_no }}</td>
-                    <td class="px-4 py-2">{{ invoice.customer_name }}</td>
-                    <td class="px-4 py-2">{{ invoice.date_of_sale|date:'Y-m-d' }}</td>
-                    <td class="px-4 py-2">{{ invoice.user.username }}</td>
-                    <td class="px-4 py-2">${{ invoice.total|floatformat:2 }}</td>
-                    <td class="px-4 py-2">${{ invoice.amount_paid|floatformat:2 }}</td>
-                    <td class="px-4 py-2 {% if invoice.balance > 0 %}text-red-600 dark:text-red-400 font-semibold{% elif invoice.balance == 0 %}text-green-600 dark:text-green-400 font-semibold{% else %}text-blue-600 dark:text-blue-400 font-semibold{% endif %}">${{ invoice.balance|floatformat:2 }}</td>
-                    <td class="px-4 py-2 flex gap-2">
-                        <a href="{% url 'edit_invoice' invoice.id %}" class="text-white bg-yellow-500 hover:bg-yellow-600 rounded px-3 py-1 text-xs action-btn">Edit</a>
-                        <form method="post" onsubmit="return confirm('Are you sure you want to delete this invoice? This action cannot be undone.');" style="display:inline;">
-                            {% csrf_token %}
-                            <input type="hidden" name="delete_invoice_id" value="{{ invoice.id }}">
-                            <button type="submit" class="text-white bg-red-600 hover:bg-red-700 rounded px-3 py-1 text-xs action-btn">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="px-4 py-8 text-center">
-                        <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
-                            <svg class="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                            {% if search_params.start_date or search_params.end_date or search_params.customer_name or search_params.invoice_no %}
-                                <p class="text-base font-medium mb-1">No invoices found</p>
-                                <p class="text-sm">Try adjusting your search criteria or <a href="{% url 'manager_dashboard' %}" class="text-blue-600 hover:text-blue-800 underline">view all invoices</a></p>
-                            {% else %}
-                                <p class="text-base font-medium mb-1">No invoices for today</p>
-                                <p class="text-sm">Use the search filters above to find invoices from other dates</p>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+    <!-- Sales Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-gradient-to-r from-green-400 to-green-600 p-6 rounded-lg shadow text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-green-100 text-sm font-medium">Total Sales</p>
+                    <p class="text-3xl font-bold">${{ total_sales|floatformat:2 }}</p>
+                </div>
+                <div class="bg-green-500 bg-opacity-30 rounded-full p-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-blue-400 to-blue-600 p-6 rounded-lg shadow text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium">Total Invoices</p>
+                    <p class="text-3xl font-bold">{{ invoices|length }}</p>
+                </div>
+                <div class="bg-blue-500 bg-opacity-30 rounded-full p-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-gradient-to-r from-purple-400 to-purple-600 p-6 rounded-lg shadow text-white">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium">Average Invoice</p>
+                    <p class="text-3xl font-bold">
+                        {% if invoices|length > 0 %}
+                            ${% widthratio total_sales invoices|length 1 %}
+                        {% else %}
+                            $0.00
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="bg-purple-500 bg-opacity-30 rounded-full p-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoices Table -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Invoices</h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Invoice</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Customer</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Sales Rep</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Paid</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Balance</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for invoice in invoices %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer invoice-row" data-invoice-url="{% url 'invoice_detail' invoice.id %}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ invoice.invoice_no }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-gray-100">{{ invoice.customer_name|default:"Walk-in Customer" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-gray-100">{{ invoice.date_of_sale|date:'M d, Y' }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-gray-100">{{ invoice.user.username|title }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">${{ invoice.total|floatformat:2 }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-gray-100">${{ invoice.amount_paid|floatformat:2 }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                                {% if invoice.balance > 0 %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                {% elif invoice.balance == 0 %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                {% else %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200{% endif %}">
+                                ${{ invoice.balance|floatformat:2 }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex space-x-3">
+                                <a href="{% url 'edit_invoice' invoice.id %}" 
+                                   class="inline-flex items-center px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs font-medium transition action-btn">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Edit
+                                </a>
+                                <form method="post" onsubmit="return confirm('Are you sure you want to delete this invoice? This action cannot be undone.');" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="delete_invoice_id" value="{{ invoice.id }}">
+                                    <button type="submit" 
+                                            class="inline-flex items-center px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium transition action-btn">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center">
+                            <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+                                <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                {% if search_params.start_date or search_params.end_date or search_params.customer_name or search_params.invoice_no %}
+                                    <h3 class="text-lg font-medium mb-2">No invoices found</h3>
+                                    <p class="text-sm">Try adjusting your search criteria or <a href="{% url 'manager_dashboard' %}" class="text-blue-600 hover:text-blue-800 underline">view all invoices</a></p>
+                                {% else %}
+                                    <h3 class="text-lg font-medium mb-2">No invoices for today</h3>
+                                    <p class="text-sm mb-4">Use the search filters above to find invoices from other dates</p>
+                                    <a href="{% url 'sales_entry' %}" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                        Create First Sale
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
 <script>
-// Only navigate to invoice detail if not clicking an action button
+// Invoice row click handling
 document.addEventListener('DOMContentLoaded', function() {
     // Invoice row click handling
     document.querySelectorAll('.invoice-row').forEach(function(row) {
@@ -177,8 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Search form enhancements
-    const searchForm = document.querySelector('form[method="get"]');
-    const searchInputs = searchForm.querySelectorAll('input[type="text"], input[type="date"]');
+    const searchInputs = document.querySelectorAll('input[type="text"], input[type="date"]');
     
     // Add input event listeners for better UX
     searchInputs.forEach(function(input) {
@@ -195,21 +366,61 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                searchForm.submit();
+                this.closest('form').submit();
             }
         });
     });
     
-    // Clear button functionality
-    const clearButton = document.querySelector('a[href*="manager_dashboard"]');
-    if (clearButton) {
-        clearButton.addEventListener('click', function(e) {
-            // Clear all form inputs before navigating
-            searchInputs.forEach(function(input) {
-                input.value = '';
-                input.classList.remove('ring-2', 'ring-blue-300', 'border-blue-400');
-            });
-        });
+    // Set today's date as default for print date picker
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('printDate').value = today;
+});
+
+// Print functionality
+function printTodaysInvoices() {
+    const today = new Date().toISOString().split('T')[0];
+    window.open(`/sales/print_daily/?date=${today}`, '_blank');
+}
+
+function printSearchResults() {
+    const params = new URLSearchParams();
+    
+    // Get current search parameters
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const customerName = document.getElementById('customer_name').value;
+    const invoiceNo = document.getElementById('invoice_no').value;
+    
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (customerName) params.append('customer_name', customerName);
+    if (invoiceNo) params.append('invoice_no', invoiceNo);
+    
+    window.open(`/sales/print_search/?${params.toString()}`, '_blank');
+}
+
+function toggleDatePicker() {
+    const datePicker = document.getElementById('datePicker');
+    datePicker.classList.toggle('hidden');
+}
+
+function printSpecificDate() {
+    const date = document.getElementById('printDate').value;
+    if (date) {
+        window.open(`/sales/print_daily/?date=${date}`, '_blank');
+        document.getElementById('datePicker').classList.add('hidden');
+    } else {
+        alert('Please select a date');
+    }
+}
+
+// Close date picker when clicking outside
+document.addEventListener('click', function(event) {
+    const datePicker = document.getElementById('datePicker');
+    const toggleButton = event.target.closest('[onclick="toggleDatePicker()"]');
+    
+    if (!toggleButton && !datePicker.contains(event.target)) {
+        datePicker.classList.add('hidden');
     }
 });
 </script>
