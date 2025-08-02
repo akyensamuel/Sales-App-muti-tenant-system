@@ -1,41 +1,23 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if is_edit %}Edit{% else %}Add{% endif %} Expense - Accounting</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-blue-600 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">
-                <i class="fas fa-{% if is_edit %}edit{% else %}plus{% endif %} mr-2"></i>
-                {% if is_edit %}Edit Expense{% else %}Add New Expense{% endif %}
-            </h1>
-            <div class="flex items-center space-x-4">
-                <a href="{% url 'expense_list' %}" class="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded transition">
-                    <i class="fas fa-list mr-1"></i>All Expenses
-                </a>
-                <a href="{% url 'accounting_dashboard' %}" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded transition">
-                    <i class="fas fa-dashboard mr-1"></i>Dashboard
-                </a>
-            </div>
-        </div>
-    </nav>
+{% extends 'accounting_app/base.html' %}
 
-    <!-- Main Content -->
-    <div class="container mx-auto mt-6 px-4 max-w-4xl">
-        <!-- Form Card -->
-        <div class="bg-white rounded-lg shadow-md p-8">
-            <div class="mb-6">
-                <h2 class="text-2xl font-bold text-gray-900">
-                    {% if is_edit %}
-                        <i class="fas fa-edit mr-2 text-blue-600"></i>Update Expense Details
-                    {% else %}
-                        <i class="fas fa-plus-circle mr-2 text-green-600"></i>Record New Business Expense
+{% block page_title %}{% if is_edit %}Edit Expense{% else %}Add New Expense{% endif %}{% endblock %}
+{% block nav_icon %}fas fa-{% if is_edit %}edit{% else %}plus{% endif %}{% endblock %}
+
+{% block nav_extra_buttons %}
+<a href="{% url 'expense_list' %}" class="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded transition-colors duration-200">
+    <i class="fas fa-list mr-1"></i>All Expenses
+</a>
+{% endblock %}
+
+{% block accounting_content %}
+    <!-- Form Card -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 transition-colors duration-200 max-w-4xl mx-auto">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+                {% if is_edit %}
+                    <i class="fas fa-edit mr-2 text-blue-600 dark:text-blue-400"></i>Update Expense Details
+                {% else %}
+                    <i class="fas fa-plus-circle mr-2 text-green-600 dark:text-green-400"></i>Record New Business Expense
                     {% endif %}
                 </h2>
                 <p class="text-gray-600 mt-2">
@@ -260,5 +242,4 @@
             {% endif %}
         });
     </script>
-</body>
-</html>
+{% endblock %}

@@ -334,7 +334,7 @@
                             <tbody>
                                 {% for item in invoice.items.all %}
                                 <tr>
-                                    <td>{{ item.item.name }}</td>
+                                    <td>{{ item.item }}</td>
                                     <td class="text-center">{{ item.quantity }}</td>
                                     <td class="text-right">${{ item.unit_price|floatformat:2 }}</td>
                                     <td class="text-right">${{ item.total_price|floatformat:2 }}</td>

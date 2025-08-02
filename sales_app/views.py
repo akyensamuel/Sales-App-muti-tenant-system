@@ -411,7 +411,7 @@ def print_daily_invoices(request):
         except ValueError:
             print_date = timezone.now().date()
     
-    invoices = Invoice.objects.filter(date_of_sale=print_date).order_by('invoice_no')
+    invoices = Invoice.objects.filter(date_of_sale=print_date).prefetch_related('items').order_by('invoice_no')
     total_sales = invoices.aggregate(Sum('total'))['total__sum'] or 0
     
     context = {
@@ -433,7 +433,7 @@ def print_search_results(request):
     customer_name = request.GET.get('customer_name', '').strip()
     invoice_no = request.GET.get('invoice_no', '').strip()
     
-    invoices = Invoice.objects.all().order_by('-date_of_sale')
+    invoices = Invoice.objects.all().prefetch_related('items').order_by('-date_of_sale')
     
     # Apply the same search logic as manager_dashboard
     has_search_params = any([start_date, end_date, customer_name, invoice_no])

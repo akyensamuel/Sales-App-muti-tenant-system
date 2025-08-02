@@ -51,6 +51,10 @@ class Invoice(models.Model):
             else:
                 next_number = "001"
             self.invoice_no = f"{prefix}{next_number}"
+        
+        # Automatically update payment status when saving
+        self.update_payment_status()
+        
         super().save(*args, **kwargs)
 
     def __str__(self):

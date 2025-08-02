@@ -1,0 +1,45 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Accounting App Navigation -->
+<nav class="bg-blue-600 dark:bg-gray-800 text-white p-4 transition-colors duration-200 mb-6 rounded-lg">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold">
+            <i class="{% block nav_icon %}fas fa-calculator{% endblock %} mr-2"></i>
+            {% block page_title %}Accounting Dashboard{% endblock %}
+        </h1>
+        <div class="flex items-center space-x-4">
+            {% block nav_extra_buttons %}{% endblock %}
+            
+            {% if user.is_authenticated %}
+                <span class="text-sm hidden sm:inline">Welcome, {{ user.get_full_name|default:user.username }}</span>
+            {% endif %}
+            
+            <a href="{% url 'accounting_dashboard' %}" class="bg-blue-700 dark:bg-gray-700 hover:bg-blue-800 dark:hover:bg-gray-600 px-3 py-1 rounded transition-colors duration-200">
+                <i class="fas fa-dashboard mr-1"></i>Accounting
+            </a>
+            
+            <a href="{% url 'core:index' %}" class="bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded transition-colors duration-200">
+                <i class="fas fa-home mr-1"></i>Main
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content Container -->
+<div class="container mx-auto px-4 max-w-7xl">
+    {% block accounting_content %}
+    {% endblock %}
+</div>
+
+<!-- Footer -->
+<footer class="mt-12 bg-gray-800 dark:bg-gray-900 text-white py-8 transition-colors duration-200">
+    <div class="container mx-auto px-4 text-center">
+        <p>&copy; 2024 Sales Management System - {% block footer_title %}Accounting Module{% endblock %}</p>
+        <p class="text-sm text-gray-400 mt-2">Secure financial management for your business</p>
+    </div>
+</footer>
+
+{% block extra_js %}{% endblock %}
+{% endblock %}

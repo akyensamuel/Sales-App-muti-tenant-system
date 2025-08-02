@@ -78,7 +78,10 @@ def accounting_dashboard(request):
         paid=Sum('amount_paid')
     )
     
-    outstanding_amount = (outstanding_invoices['total'] or 0) - (outstanding_invoices['paid'] or 0)
+    # Calculate outstanding amount properly handling None values
+    total_invoice_amount = outstanding_invoices['total'] or 0
+    total_paid_amount = outstanding_invoices['paid'] or 0
+    outstanding_amount = total_invoice_amount - total_paid_amount
     
     # Recent expenses
     recent_expenses = Expense.objects.select_related('category').order_by('-created_at')[:5]
@@ -309,6 +312,17 @@ def profit_loss_report(request):
     net_profit = total_revenue - total_expenses
     profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
     
+    # Add percentage calculation to expense data
+    expense_data_with_percentage = []
+    for expense in expense_data:
+        percentage = (expense['total'] / total_expenses * 100) if total_expenses > 0 else 0
+        expense_data_with_percentage.append({
+            'category__name': expense['category__name'],
+            'total': expense['total'],
+            'count': expense['count'],
+            'percentage': percentage
+        })
+    
     context = {
         'period_title': period_title,
         'start_date': start_date,
@@ -317,7 +331,7 @@ def profit_loss_report(request):
         'total_expenses': total_expenses,
         'net_profit': net_profit,
         'profit_margin': profit_margin,
-        'expense_data': expense_data,
+        'expense_data': expense_data_with_percentage,
         'revenue_data': revenue_data,
         'selected_year': year,
         'selected_month': month,

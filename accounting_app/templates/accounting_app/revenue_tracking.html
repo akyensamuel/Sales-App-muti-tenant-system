@@ -1,31 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Revenue Analysis - Accounting</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-blue-600 text-white p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">
-                <i class="fas fa-trending-up mr-2"></i>Revenue Analysis
-            </h1>
-            <div class="flex items-center space-x-4">
-                <a href="{% url 'accounting_dashboard' %}" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded transition">
-                    <i class="fas fa-dashboard mr-1"></i>Dashboard
-                </a>
-                <a href="{% url 'profit_loss_report' %}" class="bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded transition">
-                    <i class="fas fa-chart-bar mr-1"></i>P&L Report
-                </a>
-            </div>
-        </div>
-    </nav>
+{% extends 'accounting_app/base.html' %}
+{% load accounting_filters %}
 
+{% block page_title %}Revenue Analysis{% endblock %}
+{% block nav_icon %}fas fa-trending-up{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block accounting_content %}
     <!-- Main Content -->
     <div class="container mx-auto mt-6 px-4 max-w-7xl">
         <!-- Monthly Revenue Trend -->
@@ -132,7 +115,13 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm text-gray-900">{{ invoice.customer_name|default:"N/A" }}</div>
-                                        <div class="text-sm text-gray-500">{{ invoice.user.get_full_name|default:invoice.user.username }}</div>
+                                        <div class="text-sm text-gray-500">
+                                            {% if invoice.user %}
+                                                {{ invoice.user.get_full_name|default:invoice.user.username }}
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div>
@@ -176,7 +165,7 @@
                             <div>
                                 <p class="text-sm font-medium text-yellow-800">Total Outstanding</p>
                                 <p class="text-lg font-bold text-yellow-900">
-                                    ${% with total_outstanding=outstanding_invoices|add_balances %}{{ total_outstanding|floatformat:2 }}{% endwith %}
+                                    ${{ outstanding_invoices|total_outstanding|floatformat:2 }}
                                 </p>
                             </div>
                         </div>
@@ -188,7 +177,7 @@
                             <div>
                                 <p class="text-sm font-medium text-orange-800">30+ Days</p>
                                 <p class="text-lg font-bold text-orange-900">
-                                    {{ outstanding_invoices|length_if_old:30 }} invoice{{ outstanding_invoices|length_if_old:30|pluralize }}
+                                    {{ outstanding_invoices|count_old_invoices:30 }} invoice{{ outstanding_invoices|count_old_invoices:30|pluralize }}
                                 </p>
                             </div>
                         </div>
@@ -200,7 +189,7 @@
                             <div>
                                 <p class="text-sm font-medium text-red-800">Overdue</p>
                                 <p class="text-lg font-bold text-red-900">
-                                    {% for invoice in outstanding_invoices %}{% if invoice.payment_status == 'overdue' %}1{% endif %}{% empty %}0{% endfor %} invoice{{ outstanding_invoices|filter_overdue|length|pluralize }}
+                                    {{ outstanding_invoices|count_overdue }} invoice{{ outstanding_invoices|count_overdue|pluralize }}
                                 </p>
                             </div>
                         </div>
@@ -288,5 +277,4 @@
             }
         });
     </script>
-</body>
-</html>
+{% endblock %}
