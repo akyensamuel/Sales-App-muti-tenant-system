@@ -77,9 +77,6 @@ DATABASES = {
     'default': dj_database_url.parse(database_url, conn_max_age=600)
 }
 
-# Log active DB (remove or disable in production if needed)
-print(f"[ENV DEBUG] Active DB URL: {database_url}", file=sys.stderr)
-
 # =============================================================================
 # PASSWORD VALIDATION
 # =============================================================================
