@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart.js Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chart.js Debug Test</h1>
+    
+    <div class="chart-container">
+        <h2>Revenue Chart Test</h2>
+        <canvas id="revenueChart" width="400" height="300"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <h2>Expense Chart Test</h2>
+        <canvas id="expenseChart" width="400" height="300"></canvas>
+    </div>
+
+    <script>
+        console.log('Chart.js version:', Chart.version);
+        
+        // Revenue Chart (with actual data from debug)
+        const ctx1 = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: ['August 2024', 'September 2024', 'October 2024', 'November 2024', 'December 2024', 'January 2025', 'February 2025', 'March 2025', 'April 2025', 'May 2025', 'June 2025', 'July 2025'],
+                datasets: [{
+                    label: 'Monthly Revenue',
+                    data: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 20371.0],
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#3B82F6',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Revenue: $' + context.parsed.y.toLocaleString();
+                        }
+                    }
+                }
+            }
+        });
+
+        // Expense Chart (with actual data from debug)
+        const ctx2 = document.getElementById('expenseChart').getContext('2d');
+        const expenseChart = new Chart(ctx2, {
+            type: 'doughnut',
+            data: {
+                labels: ['Utilities'],
+                datasets: [{
+                    data: [6000.0],
+                    backgroundColor: [
+                        '#FF6384',
+                        '#36A2EB',
+                        '#FFCE56',
+                        '#4BC0C0',
+                        '#9966FF',
+                        '#FF9F40'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15
+                        }
+                    }
+                }
+            }
+        });
+
+        console.log('Charts created successfully');
+        console.log('Revenue chart:', revenueChart);
+        console.log('Expense chart:', expenseChart);
+    </script>
+</body>
+</html>
