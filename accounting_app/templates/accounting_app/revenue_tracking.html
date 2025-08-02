@@ -6,46 +6,219 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Global variable to store chart instance
+let revenueChartInstance = null;
+
+// Revenue chart initialization - bulletproof version with cleanup
+function initRevenueChart() {
+    console.log('Initializing revenue chart...');
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        return;
+    }
+    
+    // Get canvas element
+    const canvas = document.getElementById('revenueChart');
+    if (!canvas) {
+        console.error('Canvas element revenueChart not found');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (revenueChartInstance) {
+        console.log('Destroying existing chart instance');
+        revenueChartInstance.destroy();
+        revenueChartInstance = null;
+    }
+    
+    // Check if canvas already has a chart attached via Chart.js registry
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        console.log('Found existing chart in registry, destroying it');
+        existingChart.destroy();
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Prepare data from Django template
+    const monthLabels = [
+        {% for month in monthly_data %}'{{ month.month }}'{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+    
+    const revenueData = [
+        {% for month in monthly_data %}{{ month.revenue }}{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+    
+    console.log('Chart data prepared:', { monthLabels, revenueData });
+    
+    try {
+        // Create the chart and store the instance
+        revenueChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'Monthly Revenue',
+                    data: revenueData,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#3B82F6',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('Revenue chart created successfully:', revenueChartInstance);
+        
+        // Show success message
+        const statusEl = document.getElementById('chartStatus');
+        if (statusEl) {
+            statusEl.textContent = 'Chart loaded successfully!';
+            statusEl.className = 'text-sm text-green-500 mt-2';
+            setTimeout(() => statusEl.style.display = 'none', 3000);
+        }
+        
+    } catch (error) {
+        console.error('Error creating revenue chart:', error);
+        
+        // Show error message
+        const statusEl = document.getElementById('chartStatus');
+        if (statusEl) {
+            statusEl.textContent = 'Error: ' + error.message;
+            statusEl.className = 'text-sm text-red-500 mt-2';
+        }
+    }
+}
+
+// Prevent multiple initializations
+let chartInitialized = false;
+
+// Initialize when DOM is ready (only once)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!chartInitialized) {
+            chartInitialized = true;
+            initRevenueChart();
+        }
+    });
+} else {
+    if (!chartInitialized) {
+        chartInitialized = true;
+        initRevenueChart();
+    }
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (revenueChartInstance) {
+        revenueChartInstance.destroy();
+        revenueChartInstance = null;
+    }
+    chartInitialized = false;
+});
+</script>
 {% endblock %}
 
 {% block accounting_content %}
     <!-- Main Content -->
     <div class="container mx-auto mt-6 px-4 max-w-7xl">
         <!-- Monthly Revenue Trend -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-xl font-semibold text-gray-900 mb-4">
-                <i class="fas fa-chart-line mr-2 text-blue-600"></i>Monthly Revenue Trend (Last 12 Months)
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 transition-colors duration-200">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-chart-line mr-2 text-blue-600 dark:text-blue-400"></i>Monthly Revenue Trend (Last 12 Months)
             </h3>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                    <canvas id="revenueChart" width="400" height="300"></canvas>
+                <div class="relative">
+                    <div style="position: relative; height: 300px; width: 100%;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                    <div id="chartStatus" class="text-sm text-gray-500 mt-2 text-center">Loading chart...</div>
                 </div>
                 <div>
-                    <h4 class="font-semibold mb-4 text-gray-800">Revenue Summary</h4>
+                    <h4 class="font-semibold mb-4 text-gray-800 dark:text-gray-200">Revenue Summary (Last 6 Months)</h4>
                     <div class="space-y-3">
-                        {% for month in monthly_data|slice:":6" %}
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded border">
+                        {% for month in monthly_data|slice:"-6:" %}
+                            <div class="flex justify-between items-center p-3 
+                                {% if month.revenue > 0 %}
+                                    bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700
+                                {% else %}
+                                    bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600
+                                {% endif %}
+                                rounded border transition-colors duration-200">
                                 <div>
-                                    <span class="font-medium text-gray-900">{{ month.month }}</span>
+                                    <span class="font-medium text-gray-900 dark:text-white">{{ month.month }}</span>
+                                    {% if month.revenue > 0 %}
+                                        <i class="fas fa-chart-line text-green-500 ml-2"></i>
+                                    {% endif %}
                                 </div>
-                                <span class="font-bold text-green-600">${{ month.revenue|floatformat:2 }}</span>
+                                <span class="font-bold 
+                                    {% if month.revenue > 0 %}
+                                        text-green-600 dark:text-green-400
+                                    {% else %}
+                                        text-gray-500 dark:text-gray-400
+                                    {% endif %}">
+                                    ${{ month.revenue|floatformat:2 }}
+                                </span>
                             </div>
                         {% endfor %}
+                        
+                        <!-- 12-Month Total Summary -->
+                        <div class="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded border-2 border-blue-200 dark:border-blue-700 mt-4">
+                            <div>
+                                <span class="font-bold text-blue-900 dark:text-blue-100">
+                                    <i class="fas fa-calculator mr-2"></i>12-Month Total
+                                </span>
+                            </div>
+                            <span class="font-bold text-xl text-blue-600 dark:text-blue-400">
+                                ${{ total_12_month_revenue|floatformat:2 }}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Payment Status Overview -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h3 class="text-xl font-semibold text-gray-900 mb-4">
-                <i class="fas fa-credit-card mr-2 text-purple-600"></i>Payment Status Overview
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 transition-colors duration-200">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <i class="fas fa-credit-card mr-2 text-purple-600 dark:text-purple-400"></i>Payment Status Overview
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {% for status in status_breakdown %}
-                    <div class="p-4 border border-gray-200 rounded-lg">
+                    <div class="p-4 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-lg transition-colors duration-200">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-sm font-medium text-gray-600 capitalize">{{ status.payment_status|title }}</span>
+                            <span class="text-sm font-medium text-gray-600 dark:text-gray-300 capitalize">{{ status.payment_status|title }}</span>
                             {% if status.payment_status == 'paid' %}
                                 <i class="fas fa-check-circle text-green-500"></i>
                             {% elif status.payment_status == 'unpaid' %}
@@ -71,12 +244,12 @@
         </div>
 
         <!-- Outstanding Invoices -->
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 transition-colors duration-200">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-semibold text-gray-900">
-                    <i class="fas fa-exclamation-triangle mr-2 text-yellow-600"></i>Outstanding Invoices
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                    <i class="fas fa-exclamation-triangle mr-2 text-yellow-600 dark:text-yellow-400"></i>Outstanding Invoices
                 </h3>
-                <div class="text-sm text-gray-500">
+                <div class="text-sm text-gray-500 dark:text-gray-400">
                     <i class="fas fa-info-circle mr-1"></i>
                     Requires follow-up for collection
                 </div>
@@ -84,38 +257,38 @@
             
             {% if outstanding_invoices %}
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Invoice Details
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Customer
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Amount & Status
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Outstanding
                                 </th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                     Days Outstanding
                                 </th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
                             {% for invoice in outstanding_invoices %}
-                                <tr class="hover:bg-gray-50">
+                                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div>
-                                            <div class="text-sm font-medium text-gray-900">{{ invoice.invoice_no }}</div>
-                                            <div class="text-sm text-gray-500">{{ invoice.date_of_sale|date:"M d, Y" }}</div>
+                                            <div class="text-sm font-medium text-gray-900 dark:text-white">{{ invoice.invoice_no }}</div>
+                                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ invoice.date_of_sale|date:"M d, Y" }}</div>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm text-gray-900">{{ invoice.customer_name|default:"N/A" }}</div>
-                                        <div class="text-sm text-gray-500">
+                                        <div class="text-sm text-gray-900 dark:text-white">{{ invoice.customer_name|default:"N/A" }}</div>
+                                        <div class="text-sm text-gray-500 dark:text-gray-400">
                                             {% if invoice.user %}
                                                 {{ invoice.user.get_full_name|default:invoice.user.username }}
                                             {% else %}
@@ -125,7 +298,7 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div>
-                                            <div class="text-sm font-medium text-gray-900">${{ invoice.total|floatformat:2 }}</div>
+                                            <div class="text-sm font-medium text-gray-900 dark:text-white">${{ invoice.total|floatformat:2 }}</div>
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                                 {% if invoice.payment_status == 'unpaid' %}bg-yellow-100 text-yellow-800
                                                 {% elif invoice.payment_status == 'partial' %}bg-orange-100 text-orange-800
@@ -136,17 +309,17 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="text-sm font-bold text-red-600">${{ invoice.balance|floatformat:2 }}</div>
-                                        <div class="text-xs text-gray-500">
+                                        <div class="text-sm font-bold text-red-600 dark:text-red-400">${{ invoice.balance|floatformat:2 }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">
                                             Paid: ${{ invoice.amount_paid|floatformat:2 }}
                                         </div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         {% with days_outstanding=invoice.date_of_sale|timesince %}
                                             <div class="text-sm 
-                                                {% if invoice.payment_status == 'overdue' %}text-red-600 font-bold
-                                                {% elif '30' in days_outstanding or '1 month' in days_outstanding %}text-orange-600
-                                                {% else %}text-gray-600{% endif %}">
+                                                {% if invoice.payment_status == 'overdue' %}text-red-600 dark:text-red-400 font-bold
+                                                {% elif '30' in days_outstanding or '1 month' in days_outstanding %}text-orange-600 dark:text-orange-400
+                                                {% else %}text-gray-600 dark:text-gray-300{% endif %}">
                                                 {{ days_outstanding }} ago
                                             </div>
                                         {% endwith %}
@@ -159,36 +332,36 @@
 
                 <!-- Outstanding Summary -->
                 <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 transition-colors duration-200">
                         <div class="flex items-center">
-                            <i class="fas fa-clock text-yellow-600 text-xl mr-3"></i>
+                            <i class="fas fa-clock text-yellow-600 dark:text-yellow-400 text-xl mr-3"></i>
                             <div>
-                                <p class="text-sm font-medium text-yellow-800">Total Outstanding</p>
-                                <p class="text-lg font-bold text-yellow-900">
+                                <p class="text-sm font-medium text-yellow-800 dark:text-yellow-300">Total Outstanding</p>
+                                <p class="text-lg font-bold text-yellow-900 dark:text-yellow-200">
                                     ${{ outstanding_invoices|total_outstanding|floatformat:2 }}
                                 </p>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-4 transition-colors duration-200">
                         <div class="flex items-center">
-                            <i class="fas fa-exclamation-triangle text-orange-600 text-xl mr-3"></i>
+                            <i class="fas fa-exclamation-triangle text-orange-600 dark:text-orange-400 text-xl mr-3"></i>
                             <div>
-                                <p class="text-sm font-medium text-orange-800">30+ Days</p>
-                                <p class="text-lg font-bold text-orange-900">
+                                <p class="text-sm font-medium text-orange-800 dark:text-orange-300">30+ Days</p>
+                                <p class="text-lg font-bold text-orange-900 dark:text-orange-200">
                                     {{ outstanding_invoices|count_old_invoices:30 }} invoice{{ outstanding_invoices|count_old_invoices:30|pluralize }}
                                 </p>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 transition-colors duration-200">
                         <div class="flex items-center">
-                            <i class="fas fa-ban text-red-600 text-xl mr-3"></i>
+                            <i class="fas fa-ban text-red-600 dark:text-red-400 text-xl mr-3"></i>
                             <div>
-                                <p class="text-sm font-medium text-red-800">Overdue</p>
-                                <p class="text-lg font-bold text-red-900">
+                                <p class="text-sm font-medium text-red-800 dark:text-red-300">Overdue</p>
+                                <p class="text-lg font-bold text-red-900 dark:text-red-200">
                                     {{ outstanding_invoices|count_overdue }} invoice{{ outstanding_invoices|count_overdue|pluralize }}
                                 </p>
                             </div>
@@ -197,9 +370,9 @@
                 </div>
             {% else %}
                 <div class="text-center py-12">
-                    <i class="fas fa-check-circle text-green-500 text-6xl mb-4"></i>
-                    <h3 class="text-xl font-medium text-gray-900 mb-2">All Caught Up!</h3>
-                    <p class="text-gray-600">No outstanding invoices at this time.</p>
+                    <i class="fas fa-check-circle text-green-500 dark:text-green-400 text-6xl mb-4"></i>
+                    <h3 class="text-xl font-medium text-gray-900 dark:text-white mb-2">All Caught Up!</h3>
+                    <p class="text-gray-600 dark:text-gray-400">No outstanding invoices at this time.</p>
                 </div>
             {% endif %}
         </div>
@@ -212,69 +385,4 @@
         </div>
     </footer>
 
-    <script>
-        // Create revenue trend chart
-        const ctx = document.getElementById('revenueChart').getContext('2d');
-        const revenueChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [
-                    {% for month in monthly_data %}
-                        '{{ month.month }}'{% if not forloop.last %},{% endif %}
-                    {% endfor %}
-                ],
-                datasets: [{
-                    label: 'Monthly Revenue',
-                    data: [
-                        {% for month in monthly_data %}
-                            {{ month.revenue }}{% if not forloop.last %},{% endif %}
-                        {% endfor %}
-                    ],
-                    borderColor: '#3B82F6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#3B82F6',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '$' + value.toLocaleString();
-                            }
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            maxRotation: 45
-                        }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return 'Revenue: $' + context.parsed.y.toLocaleString();
-                        }
-                    }
-                }
-            }
-        });
-    </script>
 {% endblock %}

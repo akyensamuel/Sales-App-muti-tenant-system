@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart Canvas Reuse Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        #chartContainer { height: 400px; margin: 20px 0; border: 1px solid #ccc; padding: 10px; }
+        button { margin: 10px; padding: 10px 20px; font-size: 16px; }
+        .success { background: #d4edda; color: #155724; padding: 10px; margin: 10px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chart Canvas Reuse Test</h1>
+        <p>This test simulates the canvas reuse error and demonstrates the fix.</p>
+        
+        <button onclick="createChart()">Create Chart</button>
+        <button onclick="recreateChart()">Recreate Chart (Test Fix)</button>
+        <button onclick="destroyChart()">Destroy Chart</button>
+        
+        <div id="status"></div>
+        
+        <div id="chartContainer">
+            <canvas id="testChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+        
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.innerHTML = message;
+            status.className = type;
+        }
+        
+        function createChart() {
+            try {
+                const canvas = document.getElementById('testChart');
+                const ctx = canvas.getContext('2d');
+                
+                // This would cause the error if we don't destroy first
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                        datasets: [{
+                            label: 'Revenue',
+                            data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20371],
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+                
+                updateStatus('✅ Chart created successfully! ID: ' + chartInstance.id, 'success');
+                
+            } catch (error) {
+                updateStatus('❌ Error creating chart: ' + error.message, 'error');
+            }
+        }
+        
+        function recreateChart() {
+            try {
+                const canvas = document.getElementById('testChart');
+                
+                // Destroy existing chart if it exists (our fix)
+                if (chartInstance) {
+                    updateStatus('🔄 Destroying existing chart...', 'info');
+                    chartInstance.destroy();
+                    chartInstance = null;
+                }
+                
+                // Check Chart.js registry for any remaining instances
+                const existingChart = Chart.getChart(canvas);
+                if (existingChart) {
+                    updateStatus('🔄 Found chart in registry, destroying...', 'info');
+                    existingChart.destroy();
+                }
+                
+                // Now create new chart
+                setTimeout(() => {
+                    createChart();
+                }, 100);
+                
+            } catch (error) {
+                updateStatus('❌ Error recreating chart: ' + error.message, 'error');
+            }
+        }
+        
+        function destroyChart() {
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+                updateStatus('🗑️ Chart destroyed successfully', 'success');
+            } else {
+                updateStatus('ℹ️ No chart to destroy', 'info');
+            }
+        }
+        
+        // Test automatic creation
+        updateStatus('🚀 Ready to test. Click "Create Chart" then "Recreate Chart" to test the fix.', 'info');
+    </script>
+</body>
+</html>

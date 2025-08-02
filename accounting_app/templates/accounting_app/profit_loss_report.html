@@ -12,6 +12,155 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Global variable to store expense chart instance
+let expenseChartInstance = null;
+
+// Expense chart initialization - bulletproof version with cleanup
+function initExpenseChart() {
+    console.log('Initializing expense chart...');
+    
+    // Check if Chart.js is available
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js is not loaded');
+        return;
+    }
+    
+    // Check if we have expense data
+    {% if not expense_data %}
+        console.log('No expense data available for chart');
+        const statusEl = document.getElementById('expenseChartStatus');
+        if (statusEl) {
+            statusEl.textContent = 'No expense data to display';
+            statusEl.className = 'text-sm text-gray-500 mt-2 text-center';
+        }
+        return;
+    {% endif %}
+    
+    // Get canvas element
+    const canvas = document.getElementById('expenseChart');
+    if (!canvas) {
+        console.error('Canvas element expenseChart not found');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (expenseChartInstance) {
+        console.log('Destroying existing expense chart instance');
+        expenseChartInstance.destroy();
+        expenseChartInstance = null;
+    }
+    
+    // Check if canvas already has a chart attached via Chart.js registry
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        console.log('Found existing expense chart in registry, destroying it');
+        existingChart.destroy();
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Prepare data from Django template
+    const expenseLabels = [
+        {% for expense in expense_data %}'{{ expense.category__name }}'{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+    
+    const expenseValues = [
+        {% for expense in expense_data %}{{ expense.total }}{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+    
+    console.log('Expense chart data prepared:', { expenseLabels, expenseValues });
+    
+    try {
+        // Create the chart and store the instance
+        expenseChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: expenseLabels,
+                datasets: [{
+                    data: expenseValues,
+                    backgroundColor: [
+                        '#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6',
+                        '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F59E0B'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return context.label + ': $' + value.toFixed(2) + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('Expense chart created successfully:', expenseChartInstance);
+        
+        // Show success message
+        const statusEl = document.getElementById('expenseChartStatus');
+        if (statusEl) {
+            statusEl.textContent = 'Chart loaded successfully!';
+            statusEl.className = 'text-sm text-green-500 mt-2 text-center';
+            setTimeout(() => statusEl.style.display = 'none', 3000);
+        }
+        
+    } catch (error) {
+        console.error('Error creating expense chart:', error);
+        
+        // Show error message
+        const statusEl = document.getElementById('expenseChartStatus');
+        if (statusEl) {
+            statusEl.textContent = 'Error: ' + error.message;
+            statusEl.className = 'text-sm text-red-500 mt-2 text-center';
+        }
+    }
+}
+
+// Prevent multiple initializations
+let expenseChartInitialized = false;
+
+// Initialize when DOM is ready (only once)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!expenseChartInitialized) {
+            expenseChartInitialized = true;
+            initExpenseChart();
+        }
+    });
+} else {
+    if (!expenseChartInitialized) {
+        expenseChartInitialized = true;
+        initExpenseChart();
+    }
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (expenseChartInstance) {
+        expenseChartInstance.destroy();
+        expenseChartInstance = null;
+    }
+    expenseChartInitialized = false;
+});
+</script>
 <style>
     @media print {
         .no-print { display: none !important; }
@@ -60,9 +209,9 @@
         </div>
 
         <!-- Report Header -->
-        <div class="bg-white rounded-lg shadow-md p-8 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 mb-6 transition-colors duration-200">
             <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-gray-900">PROFIT & LOSS STATEMENT</h1>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white">PROFIT & LOSS STATEMENT</h1>
                 <h2 class="text-xl text-gray-600 mt-2">{{ period_title }}</h2>
                 <p class="text-gray-500">{{ start_date|date:"F d, Y" }} - {{ end_date|date:"F d, Y" }}</p>
                 <p class="text-xs text-gray-400 mt-2">Generated on {{ "now"|date:"F d, Y g:i A" }}</p>
@@ -111,52 +260,52 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <!-- Revenue Details -->
                 <div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                        <i class="fas fa-dollar-sign mr-2 text-green-600"></i>Revenue Breakdown
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-dollar-sign mr-2 text-green-600 dark:text-green-400"></i>Revenue Breakdown
                     </h3>
                     <div class="space-y-3">
-                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-                            <span class="font-medium">Total Invoice Amount</span>
-                            <span class="font-bold text-green-600">${{ revenue_data.total_revenue|floatformat:2 }}</span>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded transition-colors duration-200">
+                            <span class="font-medium text-gray-900 dark:text-white">Total Invoice Amount</span>
+                            <span class="font-bold text-green-600 dark:text-green-400">${{ revenue_data.total_revenue|floatformat:2 }}</span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-                            <span class="font-medium">Amount Received</span>
-                            <span class="font-bold text-blue-600">${{ revenue_data.paid_revenue|floatformat:2 }}</span>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded transition-colors duration-200">
+                            <span class="font-medium text-gray-900 dark:text-white">Amount Received</span>
+                            <span class="font-bold text-blue-600 dark:text-blue-400">${{ revenue_data.paid_revenue|floatformat:2 }}</span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-yellow-50 rounded border border-yellow-200">
-                            <span class="font-medium">Outstanding Amount</span>
-                            <span class="font-bold text-yellow-600">
+                        <div class="flex justify-between items-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-700 transition-colors duration-200">
+                            <span class="font-medium text-gray-900 dark:text-white">Outstanding Amount</span>
+                            <span class="font-bold text-yellow-600 dark:text-yellow-400">
                                 ${{ revenue_data.total_revenue|subtract:revenue_data.paid_revenue|floatformat:2 }}
                             </span>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
-                            <span class="font-medium">Total Invoices</span>
-                            <span class="font-bold">{{ revenue_data.invoice_count }}</span>
+                        <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded transition-colors duration-200">
+                            <span class="font-medium text-gray-900 dark:text-white">Total Invoices</span>
+                            <span class="font-bold text-gray-900 dark:text-white">{{ revenue_data.invoice_count }}</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Expense Details -->
                 <div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                        <i class="fas fa-credit-card mr-2 text-red-600"></i>Expense Breakdown
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                        <i class="fas fa-credit-card mr-2 text-red-600 dark:text-red-400"></i>Expense Breakdown
                     </h3>
                     {% if expense_data %}
                         <div class="space-y-2 max-h-64 overflow-y-auto">
                             {% for expense in expense_data %}
-                                <div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded transition-colors duration-200">
                                     <div>
-                                        <span class="font-medium">{{ expense.category__name }}</span>
-                                        <span class="text-sm text-gray-600">({{ expense.count }} item{{ expense.count|pluralize }})</span>
+                                        <span class="font-medium text-gray-900 dark:text-white">{{ expense.category__name }}</span>
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">({{ expense.count }} item{{ expense.count|pluralize }})</span>
                                     </div>
-                                    <span class="font-bold text-red-600">${{ expense.total|floatformat:2 }}</span>
+                                    <span class="font-bold text-red-600 dark:text-red-400">${{ expense.total|floatformat:2 }}</span>
                                 </div>
                             {% endfor %}
                         </div>
-                        <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600 transition-colors duration-200">
                             <div class="flex justify-between items-center font-bold text-lg">
-                                <span>Total Expenses</span>
-                                <span class="text-red-600">${{ total_expenses|floatformat:2 }}</span>
+                                <span class="text-gray-900 dark:text-white">Total Expenses</span>
+                                <span class="text-red-600 dark:text-red-400">${{ total_expenses|floatformat:2 }}</span>
                             </div>
                         </div>
                     {% else %}
@@ -195,23 +344,26 @@
         </div>
 
         <!-- Chart Section -->
-        <div class="bg-white rounded-lg shadow-md p-6 no-print">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 no-print transition-colors duration-200">
             <h3 class="text-lg font-semibold mb-4">
                 <i class="fas fa-chart-pie mr-2 text-purple-600"></i>Expense Distribution
             </h3>
             {% if expense_data %}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                        <canvas id="expenseChart" width="400" height="400"></canvas>
+                    <div class="relative">
+                        <div style="position: relative; height: 400px; width: 100%;">
+                            <canvas id="expenseChart"></canvas>
+                        </div>
+                        <div id="expenseChartStatus" class="text-sm text-gray-500 mt-2 text-center">Loading chart...</div>
                     </div>
                     <div class="flex items-center">
                         <div class="w-full">
-                            <h4 class="font-semibold mb-4">Key Insights</h4>
+                            <h4 class="font-semibold mb-4 text-gray-900 dark:text-white">Key Insights</h4>
                             <div class="space-y-3">
                                 {% for expense in expense_data|slice:":3" %}
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
-                                        <span class="font-medium">{{ expense.category__name }}</span>
-                                        <span class="text-sm text-gray-600">
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded transition-colors duration-200">
+                                        <span class="font-medium text-gray-900 dark:text-white">{{ expense.category__name }}</span>
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">
                                             {{ expense.percentage|floatformat:1 }}%
                                         </span>
                                     </div>
@@ -231,56 +383,4 @@
         </div>
     </footer>
 
-    <script>
-        // Create expense distribution chart
-        {% if expense_data %}
-        const ctx = document.getElementById('expenseChart').getContext('2d');
-        const expenseChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: [
-                    {% for expense in expense_data %}
-                        '{{ expense.category__name }}'{% if not forloop.last %},{% endif %}
-                    {% endfor %}
-                ],
-                datasets: [{
-                    data: [
-                        {% for expense in expense_data %}
-                            {{ expense.total }}{% if not forloop.last %},{% endif %}
-                        {% endfor %}
-                    ],
-                    backgroundColor: [
-                        '#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6',
-                        '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16', '#F59E0B'
-                    ],
-                    borderWidth: 2,
-                    borderColor: '#ffffff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.parsed;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((value / total) * 100).toFixed(1);
-                                return context.label + ': $' + value.toFixed(2) + ' (' + percentage + '%)';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        {% endif %}
-    </script>
 {% endblock %}

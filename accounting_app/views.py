@@ -318,7 +318,7 @@ def profit_loss_report(request):
         percentage = (expense['total'] / total_expenses * 100) if total_expenses > 0 else 0
         expense_data_with_percentage.append({
             'category__name': expense['category__name'],
-            'total': expense['total'],
+            'total': float(expense['total']),  # Convert to float for JavaScript
             'count': expense['count'],
             'percentage': percentage
         })
@@ -364,11 +364,11 @@ def revenue_tracking(request):
         
         revenue = Invoice.objects.filter(
             date_of_sale__range=[month_start, month_end]
-        ).aggregate(total=Sum('total'))['total'] or 0
+        ).aggregate(total=Sum('total'))['total'] or Decimal('0')
         
         monthly_data.append({
             'month': month_start.strftime('%B %Y'),
-            'revenue': revenue,
+            'revenue': float(revenue),  # Convert to float for JavaScript
             'month_start': month_start,
             'month_end': month_end
         })
@@ -384,8 +384,12 @@ def revenue_tracking(request):
         total=Sum('total')
     ).order_by('payment_status')
     
+    # Calculate total revenue for 12 months
+    total_12_month_revenue = sum(month['revenue'] for month in monthly_data)
+    
     context = {
         'monthly_data': monthly_data,
+        'total_12_month_revenue': total_12_month_revenue,
         'outstanding_invoices': outstanding_invoices,
         'status_breakdown': status_breakdown,
     }
