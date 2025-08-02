@@ -2,6 +2,21 @@
 
 A comprehensive Django-based sales management system with advanced features for inventory management, sales tracking, reporting, and print functionality. Built with modern UI components and role-based access control.
 
+## 📁 Project Organization
+
+This project is organized with a structured directory layout for optimal development workflow:
+
+- **`docs/`** - Project documentation
+  - `features/` - Feature-specific documentation and guides
+  - `fixes/` - Bug fixes and improvement documentation
+- **`tests/`** - Testing utilities and validation scripts
+  - `functional/` - End-to-end and functional testing
+  - `debugging/` - Debug utilities and diagnostic tools
+  - `utilities/` - General testing utilities
+  - `validation/` - Data validation and verification scripts
+
+For detailed information about each directory, see the respective README.md files.
+
 ## 🚀 Key Features
 
 ### 🔐 **User Management & Permissions**
@@ -506,5 +521,5 @@ MIT License - see LICENSE file for details
 
 **Version:** 2.0.0  
 **Last Updated:** August 2025  
-**Maintainer:** Samuel Akyensah  
-**Status:** Production Ready
+**Maintainer:** Akyen Samuel 
+**Status:** Production Ready(quite)
