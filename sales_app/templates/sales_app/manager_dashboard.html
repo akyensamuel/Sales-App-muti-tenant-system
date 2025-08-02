@@ -15,17 +15,97 @@
             {% endif %}
         </div>
     </div>
-    <form method="get" class="mb-6 flex flex-col sm:flex-row gap-4 items-end">
-        <div>
-            <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Start Date</label>
-            <input type="date" id="start_date" name="start_date" value="{{ request.GET.start_date|default:'' }}" class="rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2" />
+    <form method="get" class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
+        <div class="mb-4">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Search Invoices</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Search by any combination of the fields below. Results will include invoices matching any of the criteria (OR search).
+            </p>
         </div>
-        <div>
-            <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200">End Date</label>
-            <input type="date" id="end_date" name="end_date" value="{{ request.GET.end_date|default:'' }}" class="rounded border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2" />
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <!-- Date Range Search -->
+            <div>
+                <label for="start_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Start Date</label>
+                <input type="date" id="start_date" name="start_date" 
+                       value="{{ search_params.start_date|default:'' }}" 
+                       class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            
+            <div>
+                <label for="end_date" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">End Date</label>
+                <input type="date" id="end_date" name="end_date" 
+                       value="{{ search_params.end_date|default:'' }}" 
+                       class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            
+            <!-- Customer Name Search -->
+            <div>
+                <label for="customer_name" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Customer Name</label>
+                <input type="text" id="customer_name" name="customer_name" 
+                       value="{{ search_params.customer_name|default:'' }}" 
+                       placeholder="Enter customer name..." 
+                       class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            
+            <!-- Invoice Number Search -->
+            <div>
+                <label for="invoice_no" class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Invoice Number</label>
+                <input type="text" id="invoice_no" name="invoice_no" 
+                       value="{{ search_params.invoice_no|default:'' }}" 
+                       placeholder="Enter invoice number..." 
+                       class="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
         </div>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Search</button>
+        
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-3">
+            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm shadow transition focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                Search Invoices
+            </button>
+            
+            <a href="{% url 'manager_dashboard' %}" class="inline-flex items-center justify-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg text-sm shadow transition focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Clear & Show Today
+            </a>
+        </div>
     </form>
+    
+    <!-- Search Results Summary -->
+    {% if search_params.start_date or search_params.end_date or search_params.customer_name or search_params.invoice_no %}
+    <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+        <div class="flex items-center justify-between">
+            <div>
+                <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-200 mb-1">Search Results</h4>
+                <div class="text-xs text-blue-700 dark:text-blue-300">
+                    Searched for:
+                    {% if search_params.start_date %}
+                        <span class="inline-block bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded mr-1">From: {{ search_params.start_date }}</span>
+                    {% endif %}
+                    {% if search_params.end_date %}
+                        <span class="inline-block bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded mr-1">To: {{ search_params.end_date }}</span>
+                    {% endif %}
+                    {% if search_params.customer_name %}
+                        <span class="inline-block bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded mr-1">Customer: "{{ search_params.customer_name }}"</span>
+                    {% endif %}
+                    {% if search_params.invoice_no %}
+                        <span class="inline-block bg-blue-200 dark:bg-blue-700 px-2 py-1 rounded mr-1">Invoice: "{{ search_params.invoice_no }}"</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-lg font-bold text-blue-800 dark:text-blue-200">{{ invoices|length }} result{{ invoices|length|pluralize }}</div>
+                <div class="text-xs text-blue-600 dark:text-blue-400">found</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <p class="mb-4 text-lg text-gray-700 dark:text-gray-200">Total Sales: <span class="font-semibold">${{ total_sales }}</span></p>
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -62,7 +142,20 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" class="px-4 py-2 text-center text-gray-500 dark:text-gray-400">No invoices found for the selected period.</td>
+                    <td colspan="8" class="px-4 py-8 text-center">
+                        <div class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400">
+                            <svg class="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            {% if search_params.start_date or search_params.end_date or search_params.customer_name or search_params.invoice_no %}
+                                <p class="text-base font-medium mb-1">No invoices found</p>
+                                <p class="text-sm">Try adjusting your search criteria or <a href="{% url 'manager_dashboard' %}" class="text-blue-600 hover:text-blue-800 underline">view all invoices</a></p>
+                            {% else %}
+                                <p class="text-base font-medium mb-1">No invoices for today</p>
+                                <p class="text-sm">Use the search filters above to find invoices from other dates</p>
+                            {% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -72,6 +165,7 @@
 <script>
 // Only navigate to invoice detail if not clicking an action button
 document.addEventListener('DOMContentLoaded', function() {
+    // Invoice row click handling
     document.querySelectorAll('.invoice-row').forEach(function(row) {
         row.addEventListener('click', function(e) {
             if (e.target.closest('.action-btn')) {
@@ -81,6 +175,42 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = row.getAttribute('data-invoice-url');
         });
     });
+    
+    // Search form enhancements
+    const searchForm = document.querySelector('form[method="get"]');
+    const searchInputs = searchForm.querySelectorAll('input[type="text"], input[type="date"]');
+    
+    // Add input event listeners for better UX
+    searchInputs.forEach(function(input) {
+        input.addEventListener('input', function() {
+            // Add subtle visual feedback when user types
+            if (this.value.trim()) {
+                this.classList.add('ring-2', 'ring-blue-300', 'border-blue-400');
+            } else {
+                this.classList.remove('ring-2', 'ring-blue-300', 'border-blue-400');
+            }
+        });
+        
+        // Handle Enter key to submit form
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchForm.submit();
+            }
+        });
+    });
+    
+    // Clear button functionality
+    const clearButton = document.querySelector('a[href*="manager_dashboard"]');
+    if (clearButton) {
+        clearButton.addEventListener('click', function(e) {
+            // Clear all form inputs before navigating
+            searchInputs.forEach(function(input) {
+                input.value = '';
+                input.classList.remove('ring-2', 'ring-blue-300', 'border-blue-400');
+            });
+        });
+    }
 });
 </script>
 {% endblock %}

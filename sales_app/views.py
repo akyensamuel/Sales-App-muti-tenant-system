@@ -317,14 +317,42 @@ def sales_entry(request):
 @user_passes_test(is_manager)
 def manager_dashboard(request):
     invoices = Invoice.objects.all().order_by('-date_of_sale')
+    
+    # Get search parameters
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
-
-    if start_date:
-        invoices = invoices.filter(date_of_sale__gte=start_date)
-    if end_date:
-        invoices = invoices.filter(date_of_sale__lte=end_date)
-    if not start_date and not end_date:
+    customer_name = request.GET.get('customer_name', '').strip()
+    invoice_no = request.GET.get('invoice_no', '').strip()
+    
+    # Check if any search parameters are provided
+    has_search_params = any([start_date, end_date, customer_name, invoice_no])
+    
+    if has_search_params:
+        # Build OR conditions using Q objects
+        from django.db.models import Q
+        search_conditions = Q()
+        
+        # Date range search
+        if start_date and end_date:
+            search_conditions |= Q(date_of_sale__gte=start_date, date_of_sale__lte=end_date)
+        elif start_date:
+            search_conditions |= Q(date_of_sale__gte=start_date)
+        elif end_date:
+            search_conditions |= Q(date_of_sale__lte=end_date)
+        
+        # Customer name search (case-insensitive partial match)
+        if customer_name:
+            search_conditions |= Q(customer_name__icontains=customer_name)
+        
+        # Invoice number search (case-insensitive partial match)
+        if invoice_no:
+            search_conditions |= Q(invoice_no__icontains=invoice_no)
+        
+        # Apply the OR search conditions
+        if search_conditions:
+            invoices = invoices.filter(search_conditions)
+    else:
+        # Default behavior: show today's invoices if no search parameters
         today = timezone.now().date()
         invoices = invoices.filter(date_of_sale=today)
 
@@ -358,7 +386,13 @@ def manager_dashboard(request):
     total_sales = invoices.aggregate(Sum('total'))['total__sum'] or 0
     return render(request, 'sales_app/manager_dashboard.html', {
         'invoices': invoices,
-        'total_sales': total_sales
+        'total_sales': total_sales,
+        'search_params': {
+            'start_date': start_date,
+            'end_date': end_date,
+            'customer_name': customer_name,
+            'invoice_no': invoice_no,
+        }
     })
 
 
