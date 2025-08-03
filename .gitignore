@@ -18,6 +18,10 @@ env/
 .env.staging
 supabase.txt
 database.txt
+
+# Local logs and data
+logs/
+tenant_operations.log
 *.key
 *.pem
 

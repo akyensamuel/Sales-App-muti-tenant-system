@@ -2,6 +2,37 @@
 
 A comprehensive Django-based multi-tenant sales management system with complete data isolation, advanced sales tracking, and integrated accounting features. Built for businesses requiring secure multi-organization support.
 
+**🟢 STATUS**: Production Ready | **📅 UPDATED**: August 3, 2025 | **🗄️ DATABASE**: Supabase + External PostgreSQL
+
+---
+
+## ⚡ **QUICK START - ESSENTIAL COMMANDS**
+
+### **🚀 Create New Tenant (One-Liner)**
+```bash
+D:/code/Sales_App/virtual/Scripts/python.exe manage.py create_tenant "Company Name" "subdomain" "admin@email.com" --database-url="postgresql://user:pass@host:port/db" --max-users=100 --multi-location
+```
+
+### **🔐 Default Login (CHANGE IMMEDIATELY)**
+```
+Username: Akyen
+Password: 08000000
+Groups: Admin, Managers, Cashiers
+Access: http://subdomain.localhost:8000/
+```
+
+### **🗑️ Delete Tenant (With Confirmation)**
+```bash
+D:/code/Sales_App/virtual/Scripts/python.exe manage.py delete_tenant subdomain
+```
+
+### **📊 System Status Check**
+```bash
+D:/code/Sales_App/virtual/Scripts/python.exe manage.py setup_main_database
+```
+
+---
+
 ## 🚀 Key Features
 
 ### 🏢 **Multi-Tenancy & Organization Management**
@@ -558,7 +589,48 @@ MIT License - see LICENSE file for details
 
 ---
 
-**Version:** 2.0.0  
-**Last Updated:** August 2025  
-**Maintainer:** Akyen Samuel  
-**Status:** Not quite Ready
+## 📚 Additional Documentation
+
+- **[Complete System Guide](COMPLETE_SYSTEM_GUIDE.md)** - Comprehensive operational reference with all crucial commands
+- **[Multi-Tenancy Guide](docs/MULTI_TENANCY_GUIDE.md)** - Technical architecture details
+- **[Testing Guide](TESTING_GUIDE.md)** - Test execution and debugging
+- **[Production Guide](PRODUCTION_GUIDE.md)** - Deployment procedures
+- **[Tenant Creation Guide](TENANT_CREATION_GUIDE.md)** - Step-by-step tenant setup
+
+---
+
+## 🔗 Quick Links
+
+- **Main Application**: http://localhost:8000/
+- **Admin Panel**: http://subdomain.localhost:8000/admin/
+- **System Status**: [SYSTEM_STATUS.md](SYSTEM_STATUS.md)
+- **Logs Directory**: `/logs/tenant_operations.log`
+
+---
+
+## ⚠️ Critical Security Notes
+
+1. **🔐 CHANGE DEFAULT PASSWORD**: `Akyen:08000000` must be changed immediately
+2. **🗄️ SECURE DATABASE**: Use strong passwords for all database connections
+3. **🔒 ENVIRONMENT VARIABLES**: Never commit sensitive data to version control
+4. **🔄 REGULAR UPDATES**: Keep Django and dependencies updated
+5. **💾 BACKUP STRATEGY**: Implement automated database backups
+
+---
+
+## 📞 Support & Resources
+
+**For technical issues:**
+- **Documentation**: Check `/docs/` directory
+- **Log Files**: Monitor `/logs/` directory  
+- **Test Suite**: Run `D:/code/Sales_App/virtual/Scripts/python.exe run_tests.py`
+- **System Guide**: See [COMPLETE_SYSTEM_GUIDE.md](COMPLETE_SYSTEM_GUIDE.md) for all commands
+
+**Emergency Contacts:**
+- Check `logs/tenant_operations.log` for recent operations
+- Run `verify_tenant_setup.py` for diagnostics
+- Use `test_supabase_connection.py` for database issues
+
+---
+
+**🏗️ Built with Django 5.2 | 🚀 Multi-Tenant Architecture | 🔐 Production Ready | 📅 August 2025**
