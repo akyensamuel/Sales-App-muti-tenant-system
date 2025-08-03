@@ -13,6 +13,7 @@ from django.forms import inlineformset_factory
 
 from .models import Product, Invoice, Sale, AdminLog
 from .forms import InvoiceForm, SaleForm
+from tenants.decorators import tenant_required
 
 
 # Utility function to check if user is a manager
@@ -21,6 +22,7 @@ def is_manager(user):
 
 
 # === AUTH VIEWS ===
+@tenant_required
 def login_view(request):
     if request.user.is_authenticated:
         if request.user.groups.filter(name='Managers').exists():
@@ -41,6 +43,7 @@ def login_view(request):
     return render(request, 'sales_app/login.html')
 
 
+@tenant_required
 def logout_view(request):
     logout(request)
     return redirect('login')
@@ -53,6 +56,7 @@ class ProductForm(forms.ModelForm):
         fields = ['name', 'price', 'stock']
 
 
+@tenant_required
 @login_required
 @user_passes_test(is_manager)
 def products_list(request):
@@ -60,6 +64,7 @@ def products_list(request):
     return render(request, 'sales_app/products.html', {'products': products})
 
 
+@tenant_required
 @login_required
 @user_passes_test(is_manager)
 def add_product(request):
@@ -225,6 +230,7 @@ def restore_stock_for_sale_items(sale_items, invoice_no):
 
 
 # === SALES ENTRY VIEW ===
+@tenant_required
 @login_required
 def sales_entry(request):
     SaleFormSet = inlineformset_factory(Invoice, Sale, form=SaleForm, extra=1, can_delete=True)
@@ -313,6 +319,7 @@ def sales_entry(request):
 
 
 # === MANAGER DASHBOARD & INVOICE VIEWS ===
+@tenant_required
 @login_required
 @user_passes_test(is_manager)
 def manager_dashboard(request):

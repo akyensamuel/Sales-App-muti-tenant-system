@@ -1,7 +1,211 @@
-# 🧪 Testing Guide - Sales Management System
+# Testing Guide - Multi-Tenant Sales Management System
 
-## Overview
-This guide explains how to use the comprehensive testing system in the Sales Management project. All tests are organized in the `tests/` directory with clear categorization.
+## Quick Testing Setup
+
+### 🚀 Start Development Server
+```bash
+python manage.py runserver
+```
+
+### 🏗️ Create Test Tenant
+```bash
+python manage.py create_tenant "Test Company" "test" "test@test.com"
+```
+
+### 🌐 Access Test Tenant
+- **Main App**: `http://test.localhost:8000/`
+- **Sales**: `http://test.localhost:8000/sales/`
+- **Accounting**: `http://test.localhost:8000/accounting/`
+
+### 🔑 Default Login
+- **Username**: `Akyen`
+- **Password**: `08000000`
+
+---
+
+## Multi-Tenant Testing
+
+### ✅ Test Tenant Isolation
+1. Create multiple tenants:
+```bash
+python manage.py create_tenant "Company A" "companya" "admin@companya.com"
+python manage.py create_tenant "Company B" "companyb" "admin@companyb.com"
+```
+
+2. Verify separate data:
+- Login to `http://companya.localhost:8000/`
+- Create products, customers, sales
+- Login to `http://companyb.localhost:8000/`
+- Verify different data set
+
+### ✅ Test Database Routing
+1. Check main database (tenant configs only):
+```bash
+python manage.py setup_main_database
+```
+
+2. Check tenant database (all app data):
+```bash
+# Access any tenant subdomain and verify:
+# - User authentication works
+# - Products/customers/sales are isolated
+# - Accounting data is separate
+```
+
+### ✅ Test Production Scenarios
+
+#### External Database
+```bash
+python manage.py create_tenant "Prod Test" "prodtest" "admin@prod.com" \
+  --database-url="postgresql://user:pass@external-host:5432/prodtest_db"
+```
+
+#### Force Migration (Troubleshooting)
+```bash
+python manage.py force_migrate_tenant "prodtest"
+```
+
+#### Manual Setup (Fallback)
+```bash
+python manage.py manual_setup_tenant "prodtest"
+```
+
+---
+
+## Feature Testing
+
+### 🛒 Sales App Testing
+1. **Product Management**:
+   - Add products with different categories
+   - Test stock levels and validation
+   - Verify price calculations
+
+2. **Sales Entry**:
+   - Create multi-item invoices
+   - Test customer search/creation
+   - Verify auto-save functionality
+   - Test print receipts
+
+3. **Invoice Management**:
+   - View invoice details
+   - Edit invoices (Manager role)
+   - Cancel invoices and verify stock restoration
+
+### 💰 Accounting App Testing
+1. **Dashboard**:
+   - Verify financial overview
+   - Check KPI calculations
+   - Test date range filtering
+
+2. **Expense Management**:
+   - Add expenses with categories
+   - Upload receipts
+   - Test bulk operations
+
+3. **Reports**:
+   - Generate P&L statements
+   - Test revenue analysis
+   - Verify outstanding invoice tracking
+
+### 👥 User Management Testing
+1. **Role-Based Access**:
+   - Test Admin permissions (full access)
+   - Test Manager permissions (no user management)
+   - Test Cashier permissions (sales only)
+
+2. **Authentication**:
+   - Test login/logout functionality
+   - Verify role-based redirects
+   - Test session management
+
+---
+
+## Troubleshooting Tests
+
+### 🔧 Common Issues
+
+#### 1. Subdomain Not Working
+**Problem**: `http://test.localhost:8000/` not resolving
+
+**Solution**: Add to hosts file (`C:\Windows\System32\drivers\etc\hosts`):
+```
+127.0.0.1 test.localhost
+127.0.0.1 demo.localhost
+127.0.0.1 companya.localhost
+127.0.0.1 companyb.localhost
+```
+
+#### 2. Database Connection Errors
+**Problem**: `could not connect to server`
+
+**Test Commands**:
+```bash
+# Test main database connection
+python manage.py check
+
+# Test tenant database connection
+python manage.py migrate_tenant test
+
+# Force reset if needed
+python manage.py force_migrate_tenant test
+```
+
+#### 3. Migration State Issues
+**Problem**: Tables don't exist but migrations show as applied
+
+**Solution**:
+```bash
+python manage.py force_migrate_tenant test
+```
+
+#### 4. Permission Errors
+**Problem**: Users can't access features
+
+**Check**:
+- Verify user is in correct groups (Admin, Managers, Cashiers)
+- Test on fresh tenant with default user
+- Check role-based navigation
+
+---
+
+## Performance Testing
+
+### 📊 Load Testing
+1. **Multiple Tenants**: Create 10+ tenants and test simultaneous access
+2. **Database Performance**: Monitor query performance with Django Debug Toolbar
+3. **Memory Usage**: Test with multiple tenant databases open
+
+### 🔍 Security Testing
+1. **Tenant Isolation**: Verify no cross-tenant data access
+2. **URL Manipulation**: Test direct URL access to other tenants
+3. **Authentication**: Test session security and proper logouts
+
+---
+
+## Automated Testing
+
+### 🤖 Run Test Suite
+```bash
+# Run all tests
+python manage.py test
+
+# Run specific app tests
+python manage.py test sales_app
+python manage.py test accounting_app
+python manage.py test tenants
+
+# Run with coverage
+coverage run --source='.' manage.py test
+coverage report
+```
+
+### 📝 Test Categories
+- **Unit Tests**: Model and form validation
+- **Integration Tests**: Multi-tenant functionality
+- **View Tests**: HTTP response and permission testing
+- **Database Tests**: Multi-database routing and isolation
+
+---
 
 ## 🚀 Quick Start
 

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Selection - Sales Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div>
+                <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                    Multi-Tenant Sales Management System
+                </h2>
+                {% if requested_path and requested_path != '/' %}
+                <p class="mt-2 text-center text-sm text-orange-600">
+                    You tried to access: <strong>{{ requested_path }}</strong>
+                </p>
+                <p class="mt-1 text-center text-sm text-gray-600">
+                    Please select a tenant to access this feature
+                </p>
+                {% elif show_main_site %}
+                <p class="mt-2 text-center text-sm text-gray-600">
+                    Welcome! This is a multi-tenant application.
+                </p>
+                <p class="mt-1 text-center text-sm text-gray-600">
+                    Select a tenant below to access sales and accounting features
+                </p>
+                {% else %}
+                <p class="mt-2 text-center text-sm text-gray-600">
+                    Please select a tenant to access the application
+                </p>
+                {% endif %}
+            </div>
+            
+            <div class="mt-8 space-y-6">
+                {% if tenants %}
+                    <div class="rounded-md shadow-sm space-y-3">
+                        {% for tenant in tenants %}
+                            <div class="border border-gray-300 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                                {% if requested_path and requested_path != '/' %}
+                                    <a href="http://{{ tenant.subdomain }}.{{ current_host }}{{ requested_path }}" 
+                                       class="block text-decoration-none">
+                                {% else %}
+                                    <a href="http://{{ tenant.subdomain }}.{{ current_host }}" 
+                                       class="block text-decoration-none">
+                                {% endif %}
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <h3 class="text-lg font-medium text-gray-900">{{ tenant.name }}</h3>
+                                            <p class="text-sm text-gray-500">{{ tenant.subdomain }}.{{ current_host }}</p>
+                                            {% if tenant.admin_email %}
+                                                <p class="text-xs text-gray-400">Admin: {{ tenant.admin_email }}</p>
+                                            {% endif %}
+                                            {% if requested_path and requested_path != '/' %}
+                                                <p class="text-xs text-blue-600 mt-1">Will open: {{ requested_path }}</p>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex items-center">
+                                            {% if tenant.supports_multi_location %}
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
+                                                    Multi-Location
+                                                </span>
+                                            {% endif %}
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="rounded-md bg-yellow-50 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-yellow-800">No Active Tenants Found</h3>
+                                <div class="mt-2 text-sm text-yellow-700">
+                                    <p>No active tenants are configured. Please contact your administrator or create tenant accounts.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <div class="rounded-md bg-blue-50 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-blue-800">Development Note</h3>
+                            <div class="mt-2 text-sm text-blue-700">
+                                <p>For local development, you may need to add tenant domains to your hosts file:</p>
+                                <code class="block mt-1 text-xs bg-blue-100 p-1 rounded">
+                                    127.0.0.1 demo.localhost<br>
+                                    127.0.0.1 test.localhost<br>
+                                    127.0.0.1 dev.localhost
+                                </code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <a href="/admin/" class="text-sm text-gray-500 hover:text-gray-700">
+                        System Administration →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

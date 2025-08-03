@@ -17,6 +17,7 @@ from .models import (
     TaxSettings, AccountingAuditLog
 )
 from sales_app.models import Invoice, Sale
+from tenants.decorators import tenant_required
 
 def is_admin(user):
     return user.is_authenticated and user.groups.filter(name='Admin').exists()
@@ -32,6 +33,7 @@ def log_audit_action(user, action, model_name, object_id="", details="", ip_addr
         ip_address=ip_address
     )
 
+@tenant_required
 def accounting_login(request):
     if request.user.is_authenticated:
         if is_admin(request.user):
@@ -50,6 +52,7 @@ def accounting_login(request):
             return render(request, 'accounting_app/login.html', {'error': 'Invalid credentials or insufficient permissions.'})
     return render(request, 'accounting_app/login.html')
 
+@tenant_required
 @login_required
 @user_passes_test(is_admin)
 def accounting_dashboard(request):

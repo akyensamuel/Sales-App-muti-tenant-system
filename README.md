@@ -1,47 +1,52 @@
 # Sales Management System
 
-A comprehensive Django-based sales management system with advanced features for inventory management, sales tracking, reporting, and print functionality. Built with modern UI components and role-based access control.
+A comprehensive Django-based multi-tenant sales management system with complete data isolation, advanced sales tracking, and integrated accounting features. Built for businesses requiring secure multi-organization support.
 
 ## 🚀 Key Features
 
-### 🔐 **User Management & Permissions**
-- **Role-Based Access Control:**
-  - **Admin:** Full system access, product management, user management
-  - **Manager:** Sales oversight, reporting, dashboard access, invoice management
-  - **Cashier:** Sales entry and basic invoice operations
-- **Secure Authentication:** Custom login/logout with automatic role-based redirects
-- **Group-Based Navigation:** Dynamic menu items based on user permissions
+### 🏢 **Multi-Tenancy & Organization Management**
+- **Complete Data Isolation**: Separate PostgreSQL databases per tenant
+- **Subdomain-Based Access**: `tenant.domain.com` routing with middleware
+- **Supabase Integration**: Main database for tenant configurations
+- **Production-Ready**: Supports unlimited tenants with independent scaling
+
+### 🔐 **User Management & Security**
+- **Role-Based Access Control**:
+  - **Admin**: Full system access, user management, settings
+  - **Managers**: Sales oversight, reporting, invoice management
+  - **Cashiers**: Sales entry, basic operations
+- **Secure Authentication**: Django built-in with custom middleware
+- **Group-Based Permissions**: Dynamic navigation and feature access
 
 ### 📊 **Sales Management**
-- **Advanced Sales Entry:**
-  - Multi-item invoice creation with dynamic row management
-  - Real-time price calculation and total computation
-  - Stock validation with live inventory checking
-  - Customer information management
-  - Discount and payment tracking
-  - Local storage auto-save to prevent data loss
+- **Advanced Sales Entry**:
+  - Multi-item invoice creation with AJAX
+  - Real-time stock validation and price calculation
+  - Customer management with contact tracking
+  - Automatic inventory updates
+  - Local storage auto-save for data protection
 
-- **Smart Product Selection:**
-  - AJAX-powered product search with autocomplete
-  - Stock level display during product selection
-  - Automatic price population from product database
-  - Stock deduction upon sale completion
+- **Smart Product Management**:
+  - Autocomplete product search
+  - Live stock level display
+  - Bulk product operations
+  - Category-based organization
 
-### 📋 **Invoice Management**
-- **Comprehensive Invoice System:**
-  - Auto-generated unique invoice numbers
-  - Detailed invoice views with item breakdowns
-  - Invoice editing capabilities for managers
-  - Balance tracking (paid/unpaid/overpaid)
-  - Invoice deletion with automatic stock restoration
+### 📋 **Invoice & Receipt System**
+- **Professional Invoicing**:
+  - Auto-generated invoice numbers
+  - Detailed line items with calculations
+  - Payment tracking (paid/unpaid/partial)
+  - Invoice editing and cancellation
+  - Stock restoration on cancellation
 
-- **Print & Receipt System:**
-  - Auto-print functionality on sale completion
-  - Professional receipt templates optimized for thermal printers
-  - Standard A4 invoice printing for business records
-  - Print-friendly layouts with proper formatting
+- **Print System**:
+  - Thermal receipt printing
+  - A4 invoice templates
+  - Auto-print on sale completion
+  - Print-optimized layouts
 
-### � **Accounting & Financial Management**
+### 💰 **Accounting & Financial Management**
 - **Comprehensive Financial Dashboard:**
   - Monthly revenue and expense tracking
   - Real-time profit & loss calculations
@@ -149,50 +154,68 @@ A comprehensive Django-based sales management system with advanced features for 
 - **Loading States:** Progress indicators for better user experience
 - **Error Handling:** Comprehensive error messages and validation feedback
 
-## 📱 **Technology Stack**
+## �️ **Technology Stack**
 
-### **Backend**
-- **Django 5.2:** Modern Python web framework
-- **SQLite/PostgreSQL:** Flexible database options
-- **Django Forms:** Advanced form handling and validation
-- **Custom Middleware:** Security and session management
+### **Backend Architecture**
+- **Django 5.2**: Modern Python web framework with async support
+- **PostgreSQL**: Primary database with Supabase cloud hosting
+- **Multi-Database Routing**: Custom router for tenant database isolation
+- **Django ORM**: Advanced query optimization and relationship management
 
-### **Frontend**
-- **Tailwind CSS:** Utility-first CSS framework
-- **JavaScript ES6+:** Modern client-side functionality
-- **AJAX:** Asynchronous data loading and form submission
-- **Local Storage API:** Client-side data persistence
+### **Multi-Tenancy Infrastructure**
+- **Supabase PostgreSQL**: Main database for tenant configurations
+- **Database-per-Tenant**: Complete data isolation architecture  
+- **Custom Middleware**: Subdomain routing and tenant detection
+- **Dynamic Database Connections**: Runtime database switching
 
-### **Printing & Reports**
-- **CSS Print Media:** Professional print layouts
-- **PDF-Ready Formatting:** Business-standard report generation
-- **Responsive Print Design:** Optimized for various paper sizes
+### **Frontend & UX**
+- **Tailwind CSS**: Utility-first responsive design
+- **Alpine.js**: Lightweight JavaScript framework
+- **AJAX & Fetch API**: Asynchronous data operations
+- **Local Storage**: Client-side data persistence and auto-save
+
+### **Development & Deployment**
+- **Environment Variables**: Secure configuration management
+- **Django Management Commands**: Custom tenant management CLI
+- **Git-based Workflow**: Version control with production exclusions
+- **Render/Supabase Ready**: Cloud deployment configuration
+
+### **Security & Performance**
+- **Role-Based Access Control**: Django groups and permissions
+- **CSRF Protection**: Built-in security middleware
+- **Database Connection Pooling**: Optimized for multi-tenant workloads
+- **Query Optimization**: Efficient database operations
 
 ## 🏗️ **Project Architecture**
 
-### **Application Structure**
+### **Multi-Tenant Structure**
 ```
 sales_management_project/
-├── 📱 sales_app/              # Core sales functionality
-│   ├── 🎨 templates/sales_app/
-│   │   ├── sales_entry.html    # Advanced sales form with auto-save
-│   │   ├── manager_dashboard.html # Professional dashboard interface
-│   │   ├── receipt_print.html  # Thermal printer receipt template
-│   │   ├── invoices_print.html # A4 business report template
-│   │   └── invoice_detail.html # Detailed invoice view
-│   ├── 🎯 static/sales_app/    # CSS, JS, and assets
-│   │   ├── css/               # Custom styling and print layouts
-│   │   └── js/                # AJAX functionality and form handling
-│   ├── 🔧 models.py           # Database models (Invoice, Sale, Product)
-│   ├── 🎭 views.py            # Business logic and request handling
-│   ├── 📝 forms.py            # Advanced form definitions
-│   └── 🔗 urls.py             # URL routing and patterns
-├── 🏢 accounting_app/         # Financial management (Admin only)
-│   ├── 🎨 templates/accounting_app/
-│   │   ├── dashboard.html      # Financial overview dashboard
-│   │   ├── expense_list.html   # Expense management interface
-│   │   ├── expense_form.html   # Expense creation/editing form
-│   │   ├── profit_loss_report.html # P&L statement template
+├── 🏢 tenants/                   # Multi-tenancy core
+│   ├── models.py                 # Tenant configuration model
+│   ├── middleware.py             # Subdomain routing
+│   ├── db_router.py              # Database routing logic
+│   └── management/commands/      # Tenant management CLI
+│       ├── create_tenant.py      # Production tenant creation
+│       ├── migrate_tenant.py     # Tenant-specific migrations
+│       ├── force_migrate_tenant.py # Database reset utility
+│       └── manual_setup_tenant.py  # Fallback setup command
+├── 📱 sales_app/                 # Sales management module
+│   ├── templates/sales_app/      # Sales interface templates
+│   ├── static/sales_app/         # Frontend assets
+│   ├── models.py                 # Sales data models
+│   └── views.py                  # Sales business logic
+├── 💰 accounting_app/            # Financial management
+│   ├── templates/accounting_app/ # Accounting interfaces
+│   ├── models.py                 # Financial data models
+│   └── views.py                  # Accounting operations
+├── � core/                      # Shared functionality
+│   ├── templates/core/           # Base templates
+│   └── static/core/              # Global assets
+└── ⚙️ sales_management_project/  # Project configuration
+    ├── settings.py               # Django settings with multi-DB
+    ├── urls.py                   # URL routing
+    └── wsgi.py                   # WSGI application
 │   │   └── revenue_tracking.html   # Revenue analysis dashboard
 │   ├── 🔧 models.py           # Financial models (Expense, ProfitLoss, etc.)
 │   ├── 🎭 views.py            # Financial business logic
@@ -218,6 +241,37 @@ sales_management_project/
 - **ProfitLossSnapshot:** Monthly financial performance snapshots
 - **TaxSettings:** Configurable tax rates and calculations
 - **AccountingAuditLog:** Comprehensive audit trail for financial operations
+
+## 🏢 **Multi-Tenancy Support**
+
+### **Organization Isolation**
+- **Separate Databases:** Each organization gets its own PostgreSQL database for complete data isolation
+- **Subdomain-Based Access:** Access via `org1.yourapp.com`, `org2.yourapp.com`, etc.
+- **Independent User Management:** Users, roles, and permissions are organization-specific
+- **Multi-Location Support:** Organizations can track performance across multiple locations
+
+### **Tenant Management**
+- **Automated Setup:** Create new organizations with a single command
+- **Database Migrations:** Automatic schema setup for new tenants
+- **Resource Limits:** Configurable user limits per organization
+- **Admin Interface:** Centralized tenant management dashboard
+
+### **Scalability**
+- **Optimized for 10+ Organizations:** Designed to handle multiple tenants efficiently
+- **Database Router:** Intelligent routing ensures data never crosses organizational boundaries
+- **Performance Isolation:** Each organization's performance doesn't affect others
+
+### **Tenant Commands**
+```bash
+# Create a new organization
+python manage.py create_tenant "ABC Company" abc admin@abc.com
+
+# List all tenants
+python manage.py list_tenants
+
+# Migrate all tenant databases
+python manage.py migrate_tenants
+```
 
 ## 🚀 **Installation & Setup**
 

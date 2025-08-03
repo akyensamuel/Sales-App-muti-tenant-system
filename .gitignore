@@ -1,16 +1,45 @@
+# Python
 *.pyc
 __pycache__/
 *.pyo
 *.pyd
 .Python
-db.sqlite3
-node_modules/
+
+# Virtual environments
 virtual/
+venv/
+env/
+.venv/
+
+# Environment and configuration files
 .env
+.env.local
+.env.production
+.env.staging
 supabase.txt
+database.txt
+*.key
+*.pem
+
+# Django
+db.sqlite3
+*.sqlite3
+staticfiles/
+media/
+
+# Tenant databases (local development)
+tenant_dbs/
+*.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Test outputs
 tests/output/
+test_output/
 *.log
 coverage.xml
 htmlcov/
@@ -28,7 +57,27 @@ docs/**/*.pdf
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
 # OS
 .DS_Store
 Thumbs.db
+*.tmp
+*.temp
+
+# Production secrets
+secrets/
+certificates/
+ssl/
+
+# Local development scripts
+local_*.py
+test_*.py
+verify_*.py
+debug_*.py
+
+# Backup files
+*.bak
+*.backup
+*.old
