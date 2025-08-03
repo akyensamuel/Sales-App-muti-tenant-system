@@ -283,13 +283,17 @@ class Tenant(models.Model):
             user.set_password(password)
             user.save(using=self.database_name)
             
-            # Add to Admin group
-            admin_group = Group.objects.using(self.database_name).get(name='Admin')
-            user.groups.add(admin_group)
+            # Add to ALL required groups (Admin, Managers, Cashiers)
+            for group_name in default_groups:
+                group = Group.objects.using(self.database_name).get(name=group_name)
+                user.groups.add(group)
+                print(f"   ✅ Added user to group: {group_name}")
+            
             user.save(using=self.database_name)
             
             print(f"   ✅ Created superuser: {username} (password: {password})")
             print(f"   📧 Email: {email}")
+            print(f"   👥 Groups: {', '.join(default_groups)}")
             print(f"   🔗 Access: http://{self.subdomain}.localhost:8000/accounting/")
 
 
